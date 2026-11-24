@@ -1011,8 +1011,8 @@ function renderBat(m){
     : `<b>Never touched</b> — game files, the four anti-cheats, kernel drivers, Defender, services, bcdedit, timer-resolution hacks. Every prior value is written to a backup folder beside the script.`;
   $('#batMeta').innerHTML = `<div class="mono" style="font-size:10px;color:var(--dim);line-height:1.9">
     ${kr?'파일':'FILE'} · ${fname}<br>
-    ${kr?'인코딩':'ENC'} · UTF-8 (한글 깨짐 없음) / CRLF<br>
-    ${kr?'권한':'RIGHTS'} · UAC 자동 요청<br>
+    ${kr?'인코딩 · UTF-8 (한글 깨짐 없음)':'ENC · UTF-8 (no broken Hangul)'} / CRLF<br>
+    ${kr?'권한 · UAC 자동 요청':'RIGHTS · requests UAC elevation'}<br>
     ${kr?'배포':'SHIP'} · ${kr?'유료 버전 전용':'paid build only'}</div>`;
 
   $('#batVeilBox').innerHTML = `

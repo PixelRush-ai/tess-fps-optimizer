@@ -501,14 +501,14 @@ pre.code .str{color:#C8FF00}
 
     <div class="section-head" id="buyHead">
       <span class="no">03</span><h2 id="buyTitle"></h2><span class="rule"></span>
-      <span class="chip mono" id="buyChip">₩19,000 · $14.99</span>
+      <span class="chip mono" id="buyChip">₩9,900 · $14.99</span>
     </div>
 
     <section id="buy">
       <div class="buygrid">
         <div class="buycard primary" id="cardKr">
           <div class="tagline" id="krTag"></div>
-          <div class="p">₩19,000<small>VAT 포함</small></div>
+          <div class="p">₩9,900<small>VAT 포함</small></div>
           <div class="sub" id="krSub"></div>
           <ul id="krList"></ul>
           <button class="btn" type="button" id="kmongBtn"></button>
@@ -673,13 +673,13 @@ const T = {
     lockHidden:'+ {n}행 잠김',
     lockHead:'전체 세팅과 .bat은 유료 버전입니다',
     lockBody:'지금 화면의 병목 진단과 인게임 3행은 그대로 무료입니다. 유료 버전에서 나머지 {n}행(드라이버 · Windows 포함)과 이 사양 · 게임에 맞춰 생성된 복원 지점 · 롤백 포함 .bat이 열립니다.',
-    priceK:'₩19,000 · 크몽', priceKSub:'국내 결제',
+    priceK:'₩9,900 · 크몽', priceKSub:'국내 결제',
     priceG:'$14.99 · Ko-fi', priceGSub:'GLOBAL / CARD',
     batTitle:'안전 .bat 스크립트',
     batLockHead:'.bat 스크립트는 유료 버전에 있습니다',
     batLockBody:'구매 후 받는 파일에서 이 사양 · 게임에 맞춘 스크립트를 코드 전체 미리보기로 확인하고 그대로 내려받습니다. 메뉴는 1 적용 · 2 원상복구 · 3 종료입니다.',
     buyTitle:'무엇이 열리나',
-    buyChip:'₩19,000 · $14.99',
+    buyChip:'₩9,900 · $14.99',
     krTag:'국내 · 크몽', krSub:'카드 · 계좌이체 · 카카오페이',
     enTag:'GLOBAL · Ko-fi', enSub:'CARD · PayPal',
     item1:'전체 {n}행 세팅표 — 인게임 · 드라이버 · Windows',
@@ -715,13 +715,13 @@ const T = {
     lockHidden:'+ {n} rows locked',
     lockHead:'The full table and the .bat are in the paid build',
     lockBody:'The bottleneck read and 3 in-game rows stay free. The paid build adds the other {n} rows (driver and Windows included) and a .bat generated for this exact spec with a restore point and rollback.',
-    priceK:'₩19,000 · Kmong', priceKSub:'KOREA',
+    priceK:'₩9,900 · Kmong', priceKSub:'KOREA',
     priceG:'$14.99 · Ko-fi', priceGSub:'GLOBAL / CARD',
     batTitle:'Safe .bat script',
     batLockHead:'The .bat ships with the paid build',
     batLockBody:'In the purchased file you read the whole script generated for this spec and game, then download it. Menu: 1 apply, 2 restore, 3 exit.',
     buyTitle:'What unlocks',
-    buyChip:'₩19,000 · $14.99',
+    buyChip:'₩9,900 · $14.99',
     krTag:'KOREA · Kmong', krSub:'card · bank transfer · KakaoPay',
     enTag:'GLOBAL · Ko-fi', enSub:'CARD · PayPal',
     item1:'All {n} rows — in-game, driver, Windows',
@@ -1071,7 +1071,7 @@ function renderShell(){
 
   const km = $('#kmongBtn');
   if (BUY.kmong){
-    km.textContent = t('buy') + ' · ₩19,000';
+    km.textContent = t('buy') + ' · ₩9,900';
     km.onclick = ()=>{ window.location.href = BUY.kmong; };
   } else {
     km.textContent = t('buySoon');

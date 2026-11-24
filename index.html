@@ -1,0 +1,1126 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TESS FPS Optimizer — 1분 병목 진단 (무료)</title>
+<meta name="description" content="게임·CPU·GPU·메모리를 고르면 1080p 경쟁 세팅 기준 병목과 예상 프레임을 1분 안에 계산합니다. 진단과 인게임 핵심 3행은 무료, 전체 23행과 원클릭 .bat은 유료 버전.">
+<link rel="canonical" href="https://pixelrush-ai.github.io/tess-fps-optimizer/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="TESS FPS Optimizer — 1분 병목 진단">
+<meta property="og:description" content="사양을 그대로 두고 프레임타임만 다시 짠다. 병목·1% Low·권장 상한을 무료로 계산합니다.">
+<meta property="og:url" content="https://pixelrush-ai.github.io/tess-fps-optimizer/">
+<meta property="og:image" content="https://pixelrush-ai.github.io/tess-fps-optimizer/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#0B0D10">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0B0D10; --surface:#13161B; --surface2:#161A20; --line:#232832; --line2:#2E3542;
+  --text:#E7EAEF; --muted:#8B94A3; --dim:#5C6574;
+  --lime:#C8FF00; --lime-dim:rgba(200,255,0,.10);
+  --red:#FF5A47; --amber:#FFB020; --blue:#6EA8FF;
+  --sans:'Inter','Noto Sans KR',system-ui,-apple-system,'Segoe UI','Malgun Gothic','Apple SD Gothic Neo',sans-serif;
+  --mono:'JetBrains Mono',ui-monospace,'SFMono-Regular',Consolas,'Liberation Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{
+  background:var(--bg); color:var(--text); font-family:var(--sans);
+  font-size:14px; line-height:1.62; letter-spacing:-0.005em;
+  -webkit-font-smoothing:antialiased; padding-bottom:80px;
+}
+body::before{
+  content:""; position:fixed; inset:0; pointer-events:none; z-index:0;
+  background-image:linear-gradient(rgba(255,255,255,.018) 1px,transparent 1px),
+                   linear-gradient(90deg,rgba(255,255,255,.018) 1px,transparent 1px);
+  background-size:72px 72px;
+  mask-image:radial-gradient(ellipse 90% 60% at 50% 0%,#000 0%,transparent 75%);
+  -webkit-mask-image:radial-gradient(ellipse 90% 60% at 50% 0%,#000 0%,transparent 75%);
+}
+.wrap{position:relative;z-index:1;max-width:1180px;margin:0 auto;padding:0 28px}
+::selection{background:var(--lime);color:#000}
+
+/* ---------- top bar ---------- */
+.topbar{
+  position:sticky;top:0;z-index:60;background:rgba(11,13,16,.94);
+  border-bottom:1px solid var(--line);backdrop-filter:blur(8px);
+}
+.topbar .wrap{display:flex;align-items:center;justify-content:space-between;height:60px}
+.brand{display:flex;align-items:center;gap:12px;min-width:0}
+.mark{width:3px;height:22px;background:var(--lime);flex:none}
+.wordmark{font-family:var(--mono);font-weight:700;font-size:16px;letter-spacing:.18em}
+.brand .div{width:1px;height:14px;background:var(--line2)}
+.brand .sub{font-family:var(--mono);font-size:10px;letter-spacing:.22em;color:var(--muted)}
+.brand .build{
+  font-family:var(--mono);font-size:9px;letter-spacing:.12em;color:var(--dim);
+  border:1px solid var(--line);padding:2px 6px;white-space:nowrap
+}
+.tools{display:flex;align-items:center;gap:14px}
+.lang{display:flex;border:1px solid var(--line2)}
+.lang button{
+  background:none;border:0;color:var(--muted);font-family:var(--mono);font-size:11px;
+  letter-spacing:.14em;padding:5px 11px;cursor:pointer;transition:.12s
+}
+.lang button+button{border-left:1px solid var(--line2)}
+.lang button[aria-pressed="true"]{background:var(--lime);color:#000;font-weight:700}
+.lang button:hover:not([aria-pressed="true"]){color:var(--text)}
+.probadge[role="button"]{cursor:pointer}
+.probadge[role="button"]:hover{background:#D6FF3A}
+
+/* ---------- hero ---------- */
+.hero{padding:46px 0 34px;border-bottom:1px solid var(--line)}
+.eyebrow{display:flex;align-items:center;gap:10px;font-family:var(--mono);font-size:10px;letter-spacing:.2em;color:var(--dim);margin-bottom:18px}
+.eyebrow .sq{width:6px;height:6px;background:var(--lime)}
+.eyebrow b{color:var(--muted);font-weight:500}
+.gamenote{margin-top:12px;padding-top:11px;border-top:1px dashed #1E232B;font-size:11.5px;color:var(--muted);line-height:1.55}
+.gamenote b{color:#C9D0DA;font-weight:600}
+.hero-top{display:flex;gap:40px;align-items:flex-start;justify-content:space-between}
+.hero h1{
+  font-size:38px;line-height:1.18;font-weight:800;letter-spacing:-.035em;max-width:660px;
+  word-break:keep-all;overflow-wrap:break-word
+}
+.hero h1 em{font-style:normal;color:var(--lime)}
+.hero p.lede{margin-top:14px;color:var(--muted);max-width:620px;font-size:13.5px;line-height:1.7;word-break:keep-all}
+.hero .spark{flex:none;width:230px;padding-top:6px}
+.spark svg{display:block;width:100%;height:auto}
+.spark .cap{font-family:var(--mono);font-size:9px;letter-spacing:.14em;color:var(--dim);margin-top:8px;text-align:right}
+.meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px}
+.mchip{
+  display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);
+  padding:5px 10px;font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--muted)
+}
+.mchip i{width:4px;height:4px;background:var(--lime);display:block;flex:none}
+.mchip.warn i{background:var(--amber)}
+
+/* ---------- section head ---------- */
+.section-head{display:flex;align-items:center;gap:14px;margin:44px 0 18px}
+.section-head .no{font-family:var(--mono);font-size:11px;color:var(--lime);letter-spacing:.14em}
+.section-head h2{font-size:15px;font-weight:700;letter-spacing:.02em}
+.section-head .rule{flex:1;height:1px;background:var(--line)}
+.section-head .chip{font-family:var(--mono);font-size:9px;letter-spacing:.12em;color:var(--dim);border:1px solid var(--line);padding:3px 7px}
+
+/* ---------- config ---------- */
+.cfg{display:grid;grid-template-columns:repeat(2,1fr);gap:1px;background:var(--line);border:1px solid var(--line);max-width:100%}
+.panel{background:var(--surface);padding:18px 18px 20px;min-width:0}
+.panel-head{display:flex;align-items:baseline;gap:10px;margin-bottom:14px}
+.panel-head .step{font-family:var(--mono);font-size:10px;color:var(--lime);letter-spacing:.1em}
+.panel-head .lab{font-size:12px;font-weight:600;letter-spacing:.02em}
+.panel-head .val{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:.06em;text-align:right}
+.opts{display:grid;gap:6px}
+.opts.g3{grid-template-columns:repeat(3,1fr)}
+.opts.g2{grid-template-columns:repeat(2,1fr)}
+.opts.g1{grid-template-columns:repeat(3,1fr)}
+.opt{
+  background:var(--surface2);border:1px solid var(--line);color:var(--text);text-align:left;
+  padding:8px 10px;cursor:pointer;font-family:inherit;font-size:12px;line-height:1.35;
+  transition:border-color .12s,background .12s;position:relative;min-width:0
+}
+.opt:hover{border-color:var(--line2);background:#1A1F26}
+.opt .n{display:block;font-weight:600;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.opt .m{display:block;font-family:var(--mono);font-size:9.5px;color:var(--dim);letter-spacing:.04em;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.opt[aria-pressed="true"]{border-color:var(--lime);background:var(--lime-dim)}
+.opt[aria-pressed="true"] .n{color:var(--lime)}
+.opt[aria-pressed="true"] .m{color:rgba(200,255,0,.65)}
+.opt[aria-pressed="true"]::after{content:"";position:absolute;top:0;right:0;width:0;height:0;border-top:7px solid var(--lime);border-left:7px solid transparent}
+
+.runbar{display:flex;align-items:center;gap:16px;margin-top:18px;flex-wrap:wrap}
+.btn{
+  font-family:var(--mono);font-size:11px;letter-spacing:.14em;padding:11px 20px;cursor:pointer;
+  background:var(--lime);color:#000;border:1px solid var(--lime);font-weight:700;transition:.12s
+}
+.btn:hover{background:#D6FF3A}
+.btn.ghost{background:transparent;color:var(--text);border-color:var(--line2);font-weight:500}
+.btn.ghost:hover{border-color:var(--lime);color:var(--lime)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.runbar .hint{font-family:var(--mono);font-size:10px;color:var(--dim);letter-spacing:.06em}
+.runbar .spec{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:.08em}
+.runbar .spec b{color:var(--lime);font-weight:500}
+
+/* ---------- cards ---------- */
+.grid3{display:grid;grid-template-columns:1.35fr 1fr 1fr;gap:1px;background:var(--line);border:1px solid var(--line)}
+.card{background:var(--surface);padding:18px}
+.clabel{font-family:var(--mono);font-size:9.5px;letter-spacing:.16em;color:var(--dim);margin-bottom:12px}
+.bignum{font-family:var(--mono);font-size:54px;line-height:1;font-weight:700;letter-spacing:-.03em}
+.bignum .u{font-size:13px;color:var(--muted);letter-spacing:.1em;margin-left:8px;font-weight:500}
+.bigsub{display:flex;gap:0;margin-top:16px;flex-wrap:wrap}
+.bigsub div{font-family:var(--mono);font-size:11px;color:var(--muted);padding-right:16px;margin-right:16px;border-right:1px solid var(--line)}
+.bigsub div:last-child{border-right:0;margin-right:0;padding-right:0}
+.bigsub b{color:var(--text);font-weight:500}
+.bigsub .g{color:var(--lime)}
+.delta{
+  display:inline-flex;align-items:center;gap:8px;margin-top:14px;
+  border:1px solid rgba(200,255,0,.35);background:var(--lime-dim);
+  padding:4px 9px;font-family:var(--mono);font-size:10px;color:var(--lime);letter-spacing:.08em
+}
+.vtext{margin-top:14px;font-size:12.5px;color:#B9C1CD;line-height:1.65}
+.vtags{display:flex;gap:6px;margin-top:14px;flex-wrap:wrap}
+.tag{font-family:var(--mono);font-size:9px;letter-spacing:.1em;border:1px solid var(--line2);padding:3px 7px;color:var(--muted)}
+.tag.hot{border-color:rgba(255,90,71,.5);color:var(--red)}
+.tag.ok{border-color:rgba(200,255,0,.4);color:var(--lime)}
+
+.bar{margin-top:6px}
+.bar+.bar{margin-top:16px}
+.bar .t{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px;letter-spacing:.08em;color:var(--muted);margin-bottom:6px}
+.bar .t b{color:var(--text);font-weight:500}
+.bar .track{height:5px;background:#1C2129;position:relative;overflow:hidden}
+.bar .fill{height:100%;background:var(--line2);width:0;transition:width .35s ease}
+.bar.hot .fill{background:var(--lime)}
+.bar.cold .fill{background:#4A5361}
+.bar .note{font-family:var(--mono);font-size:9px;color:var(--dim);margin-top:5px;letter-spacing:.05em}
+
+.tgtwrap{margin-top:4px}
+.tgtrow{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10.5px;color:var(--muted);padding:4px 0;border-bottom:1px dashed #1F242C}
+.tgtrow:last-of-type{border-bottom:0}
+.tgtrow b{color:var(--text);font-weight:500}
+.honest{margin-top:12px;font-size:12px;line-height:1.6;color:#C3CAD5;border-left:2px solid var(--amber);padding-left:10px}
+.honest b{color:var(--amber);font-weight:600}
+.nextlist{margin-top:12px;font-size:11.5px;color:var(--muted)}
+.nextlist li{list-style:none;padding-left:14px;position:relative;margin-bottom:5px}
+.nextlist li::before{content:"›";position:absolute;left:0;color:var(--lime);font-family:var(--mono)}
+
+/* ---------- table ---------- */
+.tablecard{margin-top:14px;background:var(--surface);border:1px solid var(--line);position:relative;overflow:hidden}
+.tc-head{display:flex;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.tc-head h3{font-size:13px;font-weight:700}
+.tc-head .count{font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:.08em}
+.tc-head .right{margin-left:auto;display:flex;gap:8px;align-items:center}
+.tc-head .freeTag{font-family:var(--mono);font-size:9px;letter-spacing:.1em;border:1px solid rgba(200,255,0,.4);color:var(--lime);padding:2px 6px}
+.tc-head .proTag{font-family:var(--mono);font-size:9px;letter-spacing:.1em;border:1px solid var(--line2);color:var(--muted);padding:2px 6px}
+table{width:100%;border-collapse:collapse;table-layout:fixed}
+col.c-idx{width:46px}col.c-item{width:30%}col.c-val{width:22%}col.c-why{width:auto}
+th{font-family:var(--mono);font-size:9px;letter-spacing:.14em;color:var(--dim);text-align:left;padding:9px 14px;border-bottom:1px solid var(--line);font-weight:500;background:#101317}
+td{padding:11px 14px;border-bottom:1px solid #1B1F26;vertical-align:top;font-size:12.5px}
+tr:last-child td{border-bottom:0}
+td.idx{font-family:var(--mono);font-size:10px;color:var(--dim);padding-top:13px}
+td.item{font-weight:600;color:#DCE1E8}
+td.item small{display:block;font-family:var(--mono);font-size:9px;letter-spacing:.08em;color:var(--dim);font-weight:400;margin-top:2px}
+td.val{font-family:var(--mono);font-size:11.5px;color:var(--lime);letter-spacing:.01em}
+td.why{color:var(--muted);font-size:12px;line-height:1.55}
+tr.grouprow td{background:#101317;border-bottom:1px solid var(--line);border-top:1px solid var(--line);padding:7px 14px}
+tr.grouprow .gl{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:9.5px;letter-spacing:.16em;color:var(--muted)}
+tr.grouprow .gl .dot{width:4px;height:4px;background:var(--lime)}
+tr.grouprow .gl .cnt{color:var(--dim)}
+tr.sumrow td{background:#0F1216;border-bottom:1px solid var(--line);padding:12px 14px;font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;color:var(--dim)}
+tr.sumrow b{color:var(--lime);font-weight:500}
+
+.lockblock{position:relative}
+.lockblock > .veil{top:0;bottom:0;height:auto}
+.lockedbody{filter:blur(3px);opacity:.5;user-select:none;pointer-events:none}
+.veil{
+  position:absolute;left:0;right:0;display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(180deg,rgba(11,13,16,.35) 0%,rgba(11,13,16,.92) 30%,rgba(11,13,16,.96) 100%);
+  backdrop-filter:blur(3px);z-index:5;pointer-events:auto
+}
+.veilbox{
+  width:min(560px,calc(100% - 40px));border:1px solid var(--line2);background:#12151A;
+  padding:20px 22px;text-align:left;box-shadow:0 30px 60px -20px #000
+}
+.veilbox .lockic{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:9.5px;letter-spacing:.16em;color:var(--lime)}
+.veilbox h4{margin-top:10px;font-size:16px;font-weight:700;letter-spacing:-.02em}
+.veilbox p{margin-top:7px;font-size:12px;color:var(--muted);line-height:1.6}
+.price{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+.pbtn{
+  flex:1 1 180px;display:flex;flex-direction:column;gap:2px;padding:10px 12px;
+  background:var(--lime);color:#000;border:1px solid var(--lime);text-decoration:none;cursor:pointer;
+  font-family:var(--sans);transition:.12s;text-align:left
+}
+.pbtn:hover{background:#D6FF3A}
+.pbtn .p{font-family:var(--mono);font-size:14px;font-weight:700;letter-spacing:-.02em}
+.pbtn .m{font-family:var(--mono);font-size:9px;letter-spacing:.1em;opacity:.72}
+.pbtn.alt{background:transparent;color:var(--text);border-color:var(--line2)}
+.pbtn.alt:hover{border-color:var(--lime);color:var(--lime);background:transparent}
+.pbtn.alt .m{opacity:.55}
+.veilfoot{display:flex;gap:14px;align-items:center;margin-top:12px;flex-wrap:wrap}
+.linkbtn{background:none;border:0;color:var(--muted);font-family:var(--mono);font-size:10px;letter-spacing:.1em;cursor:pointer;text-decoration:underline;text-underline-offset:3px;padding:0}
+.linkbtn:hover{color:var(--lime)}
+.demo-note{font-family:var(--mono);font-size:9px;color:var(--dim);letter-spacing:.05em;margin-left:auto}
+
+/* ---------- bat card ---------- */
+.batcard{margin-top:14px;background:var(--surface);border:1px solid var(--line);position:relative;overflow:hidden}
+.bat-head{display:flex;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.bat-head h3{font-size:13px;font-weight:700}
+.fname{font-family:var(--mono);font-size:10.5px;color:var(--lime);background:#0E1116;border:1px solid var(--line);padding:3px 8px;letter-spacing:.02em}
+.bat-head .right{margin-left:auto;display:flex;gap:8px}
+.batwrap{position:relative}
+.batwrap > .veil{top:0;bottom:0;height:auto;padding:14px 0}
+.batbody{padding:16px 18px 18px;display:grid;grid-template-columns:1.15fr 1fr;gap:22px;min-height:246px}
+.steplist{display:grid;gap:0}
+.steplist li{list-style:none;display:flex;gap:10px;padding:7px 0;border-bottom:1px dashed #1E232B;font-size:12px;color:#C3CAD5}
+.steplist li:last-child{border-bottom:0}
+.steplist .k{font-family:var(--mono);font-size:9.5px;color:var(--dim);flex:none;padding-top:2px;letter-spacing:.06em}
+.steplist .k.on{color:var(--lime)}
+.safeline{border:1px solid #2A2114;background:#151109;padding:10px 12px;font-size:11.5px;color:#D6C39A;line-height:1.6}
+.safeline b{color:var(--amber)}
+.batbody.locked{filter:blur(3px);opacity:.45;pointer-events:none;user-select:none}
+.probadge{font-family:var(--mono);font-size:9px;letter-spacing:.12em;color:#000;background:var(--lime);padding:2px 7px}
+
+/* ---------- modal ---------- */
+.modal{position:fixed;inset:0;z-index:120;display:none;align-items:center;justify-content:center;padding:24px;background:rgba(4,5,7,.78)}
+.modal.open{display:flex}
+.mbox{width:min(880px,100%);max-height:86vh;display:flex;flex-direction:column;background:#0F1216;border:1px solid var(--line2);box-shadow:0 40px 100px -30px #000}
+.mbox .mh{display:flex;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid var(--line)}
+.mbox .mh h3{font-size:13.5px;font-weight:700}
+.mbox .mh .x{margin-left:auto;background:none;border:1px solid var(--line2);color:var(--muted);width:26px;height:26px;cursor:pointer;font-family:var(--mono);font-size:13px;line-height:1}
+.mbox .mh .x:hover{border-color:var(--lime);color:var(--lime)}
+.mbox .mb{padding:18px;overflow:auto}
+.mbox .mf{padding:12px 18px;border-top:1px solid var(--line);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+pre.code{
+  margin:0;font-family:var(--mono);font-size:11px;line-height:1.75;color:#B7C0CC;
+  background:#0A0C0F;border:1px solid #1B1F26;padding:14px;overflow:auto;max-height:52vh;
+  counter-reset:ln;white-space:pre-wrap;overflow-wrap:anywhere
+}
+pre.code .l{display:block;counter-increment:ln;padding-left:38px;position:relative}
+pre.code .l::before{content:counter(ln);position:absolute;left:0;width:26px;text-align:right;color:#3A424D;font-size:10px}
+pre.code .l.c{color:#5A6371}
+pre.code .l.cmd{color:#DCE3EC}
+pre.code .l.lbl{color:var(--lime)}
+pre.code .kw{color:#8FBBFF}
+pre.code .str{color:#C8FF00}
+.licfield{display:flex;gap:8px;margin-top:14px}
+.licfield input{
+  flex:1;background:#0A0C0F;border:1px solid var(--line2);color:var(--text);
+  font-family:var(--mono);font-size:13px;letter-spacing:.16em;padding:11px 12px;outline:none;text-transform:uppercase
+}
+.licfield input:focus{border-color:var(--lime)}
+.licmsg{font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;margin-top:10px;min-height:16px}
+.licmsg.err{color:var(--red)}
+.licmsg.ok{color:var(--lime)}
+
+/* ---------- misc ---------- */
+.foot{margin-top:34px;border-top:1px solid var(--line);padding-top:18px;display:flex;gap:24px;flex-wrap:wrap;font-size:11px;color:var(--dim);line-height:1.7}
+.foot b{color:var(--muted);font-weight:600}
+.disclaimer{margin-top:14px;font-size:11px;color:#4E5763;line-height:1.7;max-width:820px}
+.disclaimer b{color:#6D7787}
+.toast{
+  position:fixed;left:50%;bottom:34px;transform:translate(-50%,20px);z-index:200;
+  background:#12151A;border:1px solid var(--line2);border-left:2px solid var(--lime);
+  padding:11px 16px;font-family:var(--mono);font-size:11px;letter-spacing:.03em;color:var(--text);
+  opacity:0;pointer-events:none;transition:.22s;max-width:min(560px,calc(100vw - 40px))
+}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+.mono{font-family:var(--mono)}
+.hide{display:none !important}
+
+@media(max-width:980px){
+  .grid3{grid-template-columns:1fr}
+  .cfg{grid-template-columns:1fr}
+  .batbody{grid-template-columns:1fr}
+  .hero-top{flex-direction:column}
+  .spark{display:none}
+  .hero h1{font-size:30px}
+  .bignum{font-size:44px}
+}
+@media(max-width:620px){
+  .wrap{padding:0 16px}
+  .opts.g3,.opts.g2,.opts.g1{grid-template-columns:1fr 1fr}
+  .topbar .wrap{height:54px}
+  .brand .build,.brand .sub,.brand .div{display:none}
+  .hero{padding:34px 0 26px}
+  .hero h1{font-size:25px}
+  .price .pbtn{flex:1 1 100%}
+  col.c-idx{width:0}
+  th:nth-child(1),td:nth-child(1){display:none}
+  td{padding:9px 8px;font-size:11.5px}
+  th{padding:8px}
+  td.why{font-size:11px}
+}
+
+/* ---------- landing only ---------- */
+.cta-mini{
+  font-family:var(--mono);font-size:10px;letter-spacing:.12em;padding:7px 12px;
+  background:var(--lime);color:#000;border:1px solid var(--lime);font-weight:700;cursor:pointer;text-decoration:none
+}
+.cta-mini:hover{background:#D6FF3A}
+.previewtag{
+  font-family:var(--mono);font-size:9px;letter-spacing:.12em;color:var(--muted);
+  border:1px solid var(--line2);padding:2px 6px
+}
+.buygrid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);border:1px solid var(--line);margin-top:6px}
+.buycard{background:var(--surface);padding:22px 20px 20px;display:flex;flex-direction:column}
+.buycard .tagline{font-family:var(--mono);font-size:9.5px;letter-spacing:.16em;color:var(--dim)}
+.buycard .p{font-family:var(--mono);font-size:26px;font-weight:700;letter-spacing:-.02em;margin-top:8px}
+.buycard .p small{font-size:11px;letter-spacing:.1em;color:var(--muted);font-weight:500;margin-left:6px}
+.buycard .sub{font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;color:var(--dim);margin-top:4px}
+.buycard ul{margin:16px 0 18px;display:grid;gap:6px}
+.buycard li{list-style:none;font-size:12px;color:#B9C1CD;padding-left:15px;position:relative;line-height:1.5}
+.buycard li::before{content:"›";position:absolute;left:0;color:var(--lime);font-family:var(--mono)}
+.buycard .btn{margin-top:auto;text-align:center;text-decoration:none;display:block}
+.buycard .note{font-family:var(--mono);font-size:9px;letter-spacing:.09em;color:var(--dim);margin-top:8px;line-height:1.5}
+.soon{background:transparent !important;color:var(--amber) !important;border-color:rgba(255,176,32,.45) !important}
+.soon:hover{border-color:var(--amber) !important;color:#FFC65C !important}
+.landingfoot > span{display:inline-flex;gap:7px;align-items:baseline}
+.landingfoot > span::before{content:"·";color:#333A45;margin-right:2px}
+.landingfoot > span:first-child::before{content:"";margin:0}
+.buycard.primary{border-left:2px solid var(--lime)}
+.honestline{margin-top:18px;border-left:2px solid var(--amber);padding-left:12px;font-size:12px;color:#C3CAD5;line-height:1.65}
+.honestline b{color:var(--amber)}
+.step8{display:grid;gap:0;margin-top:4px}
+.step8 div{display:flex;gap:10px;padding:6px 0;border-bottom:1px dashed #1E232B;font-size:12px;color:#9AA4B2}
+.step8 div:last-child{border-bottom:0}
+.step8 span.k{font-family:var(--mono);font-size:9.5px;color:var(--dim);flex:none;padding-top:2px}
+.landingfoot{display:flex;flex-wrap:wrap;gap:10px 22px;border-top:1px solid var(--line);margin-top:34px;padding:18px 0 0;font-family:var(--mono);font-size:10px;color:var(--dim);letter-spacing:.06em}
+.landingfoot b{color:var(--muted);font-weight:500}
+.landingfoot a{color:var(--muted);text-decoration:none}
+.landingfoot a:hover{color:var(--lime)}
+@media(max-width:980px){ .buygrid{grid-template-columns:1fr} }
+@media(max-width:620px){
+  .buycard .p{font-size:22px}
+  .cta-mini{display:none}
+}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="wrap">
+    <div class="brand">
+      <span class="mark"></span>
+      <span class="wordmark">TESS</span>
+      <span class="div"></span>
+      <span class="sub" id="brandSub">FPS OPTIMIZER</span>
+      <span class="build previewtag" id="buildTag">FREE PREVIEW</span>
+    </div>
+    <div class="tools">
+      <div class="lang" role="group" aria-label="Language">
+        <button id="btnKR" type="button" aria-pressed="true" data-lang="kr">KR</button>
+        <button id="btnEN" type="button" aria-pressed="false" data-lang="en">EN</button>
+      </div>
+      <a class="cta-mini" href="#buy" id="topBuy">PRO 23행 + .bat</a>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="hero">
+    <div class="hero-top">
+      <div>
+        <div class="eyebrow"><span class="sq"></span><b>TESS</b> / FPS DIAGNOSTIC CONSOLE <span style="color:#333A45">|</span> KR · EN</div>
+        <h1 id="h1"></h1>
+        <p class="lede" id="lede"></p>
+      </div>
+      <div class="spark">
+        <svg viewBox="0 0 220 74" fill="none" aria-hidden="true">
+          <path d="M0 46 L18 44 L30 45 L44 43 L58 44 L72 42 L84 43 L96 44 L104 43 L110 20 L114 52 L120 41 L132 42 L146 40 L158 41 L170 39 L182 40 L194 38 L206 39 L220 37" stroke="#C8FF00" stroke-width="1.2" stroke-linejoin="round"/>
+          <path d="M0 46 L18 44 L30 45 L44 43 L58 44 L72 42 L84 43 L96 44 L104 43 L110 20 L114 52 L120 41 L132 42 L146 40 L158 41 L170 39 L182 40 L194 38 L206 39 L220 37 L220 74 L0 74 Z" fill="rgba(200,255,0,.05)"/>
+          <line x1="0" y1="60" x2="220" y2="60" stroke="#232832" stroke-width="1" stroke-dasharray="3 3"/>
+          <g fill="#FF5A47"><circle cx="110" cy="20" r="2"/><circle cx="114" cy="52" r="2"/></g>
+        </svg>
+        <div class="cap" id="sparkCap">FRAMETIME · STUTTER SPIKE</div>
+      </div>
+    </div>
+    <div class="meta" id="metaChips"></div>
+  </section>
+
+  <div class="section-head">
+    <span class="no">01</span><h2 id="cfgTitle"></h2><span class="rule"></span>
+    <span class="chip mono" id="cfgStep">STEP 1–4</span>
+  </div>
+
+  <section class="cfg" id="cfg"></section>
+
+  <div class="runbar">
+    <button class="btn" id="runBtn" type="button"></button>
+    <span class="hint" id="runHint"></span>
+    <span class="spec mono" id="specLine"></span>
+  </div>
+
+  <div class="section-head">
+    <span class="no">02</span><h2 id="repTitle"></h2><span class="rule"></span>
+    <span class="chip mono" id="confChip">—</span>
+  </div>
+
+  <section id="report">
+    <div class="grid3">
+      <div class="card">
+        <div class="clabel" id="lblPerf"></div>
+        <div class="bignum" id="avgFps">—<span class="u">FPS</span></div>
+        <div class="bigsub">
+          <div id="subLow"></div>
+          <div id="subFt"></div>
+          <div id="subTick"></div>
+        </div>
+        <div class="vtext" id="verdictText"></div>
+        <div class="vtags" id="vtags"></div>
+      </div>
+      <div class="card">
+        <div class="clabel" id="lblBalance"></div>
+        <div class="bar hot" id="barCpu">
+          <div class="t"><span>CPU</span><b id="cpuPct">—</b></div>
+          <div class="track"><div class="fill" id="cpuFill"></div></div>
+          <div class="note" id="cpuNote"></div>
+        </div>
+        <div class="bar cold" id="barGpu">
+          <div class="t"><span>GPU</span><b id="gpuPct">—</b></div>
+          <div class="track"><div class="fill" id="gpuFill"></div></div>
+          <div class="note" id="gpuNote"></div>
+        </div>
+        <div class="honest" id="honestBox"></div>
+      </div>
+      <div class="card">
+        <div class="clabel" id="lblTarget"></div>
+        <div class="tgtwrap">
+          <div class="tgtrow"><span id="tgRefreshL"></span><b id="tgRefresh"></b></div>
+          <div class="tgtrow"><span id="tgEstL"></span><b id="tgEst"></b></div>
+          <div class="tgtrow"><span id="tgGapL"></span><b id="tgGap"></b></div>
+          <div class="tgtrow"><span id="tgCapL"></span><b id="tgCap"></b></div>
+        </div>
+        <div class="clabel" style="margin-top:16px" id="lblNext"></div>
+        <ul class="nextlist" id="nextList"></ul>
+      </div>
+    </div>
+
+    <div class="tablecard" id="tableCard">
+      <div class="tc-head">
+        <h3 id="tableTitle"></h3>
+        <span class="count" id="tableCount"></span>
+        <div class="right" id="tableTags"></div>
+      </div>
+      <div id="tableHost" style="position:relative"></div>
+    </div>
+
+    <div class="batcard" id="batCard">
+      <div class="bat-head">
+        <h3 id="batTitle"></h3>
+        <span class="fname" id="batName">—</span>
+        <div class="right" id="batActions"></div>
+      </div>
+      <div class="batwrap">
+        <div class="batbody" id="batBody">
+          <div class="step8" id="batSteps"></div>
+          <div>
+            <div class="safeline" id="batSafe"></div>
+            <div style="margin-top:12px" id="batMeta"></div>
+          </div>
+        </div>
+        <div class="veil" id="batVeil" style="display:flex"><div class="veilbox" id="batVeilBox"></div></div>
+      </div>
+    </div>
+
+    <div class="section-head" id="buyHead">
+      <span class="no">03</span><h2 id="buyTitle"></h2><span class="rule"></span>
+      <span class="chip mono" id="buyChip">₩19,000 · $14.99</span>
+    </div>
+
+    <section id="buy">
+      <div class="buygrid">
+        <div class="buycard primary" id="cardKr">
+          <div class="tagline" id="krTag"></div>
+          <div class="p">₩19,000<small>VAT 포함</small></div>
+          <div class="sub" id="krSub"></div>
+          <ul id="krList"></ul>
+          <button class="btn" type="button" id="kmongBtn"></button>
+          <div class="note" id="krNote"></div>
+        </div>
+        <div class="buycard" id="cardEn">
+          <div class="tagline" id="enTag"></div>
+          <div class="p">$14.99<small>USD</small></div>
+          <div class="sub" id="enSub"></div>
+          <ul id="enList"></ul>
+          <a class="btn ghost" href="https://ko-fi.com/tessfps/shop" target="_blank" rel="noopener" id="kofiBtn"></a>
+          <div class="note" id="enNote"></div>
+        </div>
+      </div>
+      <div class="honestline" id="buyHonest"></div>
+    </section>
+
+    <div class="landingfoot">
+      <span><b id="f1"></b> <span id="f1v"></span></span>
+      <span><b id="f2"></b> <span id="f2v"></span></span>
+      <span><b id="f3"></b> <a href="https://ko-fi.com/tessfps/shop" target="_blank" rel="noopener" id="f3v"></a></span>
+    </div>
+    <p class="disclaimer" id="disclaimer"></p>
+  </section>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+
+/* =====================================================================
+   TESS FPS Optimizer — FREE PREVIEW (GitHub Pages)
+   무료 진단 + 인게임 핵심 3행까지. 유료 .bat 생성기와 라이선스 로직은
+   이 파일에 존재하지 않는다.
+   ===================================================================== */
+
+/* ---------------- 판매 링크 (여기만 고치면 됨) ---------------- */
+const BUY = {
+  kmong: '',                              // 크몽 상품 등록 후 https://kmong.com/gig/XXXXXX
+  kofi:  'https://ko-fi.com/tessfps/shop'
+};
+
+/* ---------------- data: hardware ---------------- */
+const CPUS = [
+  {id:'5600x', name:'Ryzen 5 5600X', brand:'AMD', cores:'6C / 12T', l3:'32 MB', score:100},
+  {id:'7800x3d', name:'Ryzen 7 7800X3D', brand:'AMD', cores:'8C / 16T', l3:'96 MB 3D', score:150},
+  {id:'9800x3d', name:'Ryzen 7 9800X3D', brand:'AMD', cores:'8C / 16T', l3:'96 MB 3D', score:162},
+  {id:'12400f', name:'Core i5-12400F', brand:'INTEL', cores:'6P / 12T', l3:'18 MB', score:97},
+  {id:'13600k', name:'Core i5-13600K', brand:'INTEL', cores:'6P+8E / 20T', l3:'24 MB', score:119},
+  {id:'14700k', name:'Core i7-14700K', brand:'INTEL', cores:'8P+12E / 28T', l3:'33 MB', score:131},
+  {id:'14900k', name:'Core i9-14900K', brand:'INTEL', cores:'8P+16E / 32T', l3:'36 MB', score:137}
+];
+
+const GPUS = [
+  {id:'1660s', name:'GTX 1660 SUPER', vram:6, idx:40, brand:'nv', arch:'Turing', dlss:0},
+  {id:'3060',  name:'RTX 3060',       vram:12, idx:56, brand:'nv', arch:'Ampere', dlss:2},
+  {id:'3070',  name:'RTX 3070',       vram:8, idx:78, brand:'nv', arch:'Ampere', dlss:2},
+  {id:'4060',  name:'RTX 4060',       vram:8, idx:70, brand:'nv', arch:'Ada', dlss:3},
+  {id:'4070s', name:'RTX 4070 SUPER', vram:12, idx:112, brand:'nv', arch:'Ada', dlss:3},
+  {id:'5070ti',name:'RTX 5070 Ti',    vram:16, idx:152, brand:'nv', arch:'Blackwell', dlss:4},
+  {id:'7800xt',name:'RX 7800 XT',     vram:16, idx:110, brand:'amd', arch:'RDNA 3', dlss:0}
+];
+
+const RAMS = [{v:16},{v:32},{v:64}];
+const HZS = [144,240,360];
+const SYMPTOMS = ['drops','input','stutter'];
+
+const GAMES = {
+  pubg:     {name:'PUBG: BATTLEGROUNDS', file:'PUBG',     engine:'Unreal Engine 4', cpuRef:166, gpuRef:186, conf:'high', tag:'BR', rows:9,
+             note:{kr:'UE4 · 100인 BR. 평균 FPS보다 1% Low와 프레임타임 편차가 체감을 지배합니다. 스모크·브리치가 겹치는 순간이 측정 지점입니다.',
+                   en:'UE4 · 100-player BR. The 1% low and frame-time variance decide how it feels, not the average. Measure during overlapping smokes and breaches.'}},
+  valorant: {name:'VALORANT',            file:'VALORANT', engine:'Unreal Engine 4', cpuRef:420, gpuRef:610, conf:'high', tag:'TACTICAL', rows:6,
+             note:{kr:'UE4 · GPU 여유가 큰 대표작. 성능의 전부는 지연 체인 정리입니다. Vanguard는 커널 드라이버라 어떤 설정도 건드리면 안 됩니다.',
+                   en:'UE4 · plenty of GPU headroom. The whole game here is the latency chain. Vanguard is a kernel driver, so nothing may touch it.'}},
+  wardogs:  {name:'War Dogs',            file:'WarDogs',  engine:'UE-class', cpuRef:158, gpuRef:152, conf:'low',  tag:'TACTICAL', rows:7,
+             note:{kr:'신작 · 공개 벤치 표본이 적습니다. 이 리포트의 수치는 동급 UE 슈터 기준으로 ±20% 오차를 감안하십시오. 설정 방향은 유효합니다.',
+                   en:'Recent release · thin public data. Figures here are modelled on comparable UE shooters with ±20% error. The settings direction still holds.'}},
+  cs2:      {name:'Counter-Strike 2',    file:'CS2',      engine:'Source 2',        cpuRef:352, gpuRef:462, conf:'high', tag:'TACTICAL', rows:8,
+             note:{kr:'Source 2 · CPU 바운드. 서브틱 입력과 프레임 상한이 승률에 직결되는 몇 안 되는 타이틀입니다.',
+                   en:'Source 2 · CPU bound. One of the few titles where subtick input and a frame cap map straight onto win rate.'}},
+  apex:     {name:'Apex Legends',        file:'Apex',     engine:'Source (mod.)',   cpuRef:182, gpuRef:203, conf:'high', tag:'BR', rows:8,
+             note:{kr:'Source 기반 · 맵 로테이션과 낙하 구간에서 스트리밍 스터터가 잦습니다. 텍스처 예산이 체감을 가장 크게 바꿉니다.',
+                   en:'Source-based · streaming stutter appears on rotation and drops. The texture budget moves how it feels more than anything else.'}},
+  ow2:      {name:'Overwatch 2',         file:'OW2',      engine:'Proprietary',     cpuRef:288, gpuRef:372, conf:'high', tag:'HERO', rows:7,
+             note:{kr:'자체 엔진 · 최적화가 좋아 세팅 여지가 작습니다. 대신 버퍼링 옵션 하나가 지연을 크게 바꿉니다.',
+                   en:'In-house engine · little tuning room. One buffering toggle, though, moves latency a lot.'}}
+};
+const GAME_ORDER = ['pubg','valorant','wardogs','cs2','apex','ow2'];
+
+/* 무료 공개 3행 — 유료판과 같은 문장. 이 3행 외의 세팅 값은 이 파일에 없다. */
+const FREE_ROWS = {
+  pubg: [
+    {k:{kr:'화면 스케일',en:'Render scale'}, v:{kr:'100 (네이티브)',en:'100 (native)'},
+     why:{kr:'120은 GPU 부하만 44% 늘고 판독 이득이 없습니다.',en:'120 costs 44% more GPU time and buys no readability.'}},
+    {k:{kr:'안티앨리어싱',en:'Anti-aliasing'}, v:{kr:'매우 낮음 (TAA OFF)',en:'Very low (TAA off)'},
+     why:{kr:'TAA는 경계를 흐리고 1프레임 지연을 더합니다. 근거리 판독이 중요한 배그에선 손해입니다.',en:'TAA blurs edges and adds a frame of latency — a net loss where close-range reading decides fights.'}},
+    {k:{kr:'텍스처',en:'Textures'}, v:{kr:'중간',en:'Medium', by:'vram8'},
+     why:{kr:'8GB 이상이면 중간까지 무해합니다. 그 아래는 스트리밍 스터터가 먼저 옵니다.',en:'At 8GB and up, Medium is harmless. Below that the texture streamer stutters first.'}}
+  ],
+  valorant: [
+    {k:{kr:'그래픽 품질',en:'Quality preset'}, v:{kr:'낮음 (전체)',en:'Low (all)'},
+     why:{kr:'이 게임에서 화질 옵션은 지연만 늘립니다. GPU는 이미 남습니다.',en:'On this title quality options only add latency; the GPU is already idle.'}},
+    {k:{kr:'안티앨리어싱',en:'Anti-aliasing'}, v:{kr:'MSAA 4x',en:'MSAA 4x'},
+     why:{kr:'발로란트 AA는 비TAA 계열이라 지연이 없습니다. 경계 판독만 올립니다.',en:'Valorant AA is not TAA-based: no latency, sharper edges.'}},
+    {k:{kr:'블룸 · 디스토션 · 그림자',en:'Bloom / distortion / shadows'}, v:{kr:'끄기',en:'Off'},
+     why:{kr:'시인성을 깎는 연출만 남습니다.',en:'Pure visuals that reduce clarity.'}}
+  ],
+  wardogs: [
+    {k:{kr:'렌더 스케일',en:'Render scale'}, v:{kr:'100 (네이티브)',en:'100 (native)'},
+     why:{kr:'업스케일러 품질 모드는 경계를 흐립니다. 네이티브가 기준선입니다.',en:'Upscaler quality modes soften edges; native is the baseline.'}},
+    {k:{kr:'안티앨리어싱',en:'Anti-aliasing'}, v:{kr:'TAA 끄고 FXAA/SMAA',en:'TAA off, FXAA/SMAA'},
+     why:{kr:'신작 슈터의 TAA는 잔상이 큰 경우가 많습니다. 켤 거면 SMAA를 쓰십시오.',en:'Newer shooters often ship heavy TAA; prefer SMAA if you must.'}},
+    {k:{kr:'볼류메트릭 안개',en:'Volumetrics'}, v:{kr:'낮음',en:'Low'},
+     why:{kr:'UE 계열에서 GPU 스파이크가 가장 큰 항목입니다.',en:'Usually the largest GPU spike in UE titles.'}}
+  ],
+  cs2: [
+    {k:{kr:'화면 모드',en:'Display mode'}, v:{kr:'전체 화면 (배타적)',en:'Fullscreen (exclusive)'},
+     why:{kr:'창 모드는 DWM 합성으로 한 프레임을 더합니다.',en:'Borderless adds a frame through DWM composition.'}},
+    {k:{kr:'해상도',en:'Resolution'}, v:{kr:'1920×1080 (4:3 선호 시 1280×960)',en:'1920×1080 (or 1280×960 4:3)'},
+     why:{kr:'스트레치 비율은 취향이지만, 배타적 전체 화면은 유지하십시오.',en:'Aspect is taste; exclusive fullscreen is not.'}},
+    {k:{kr:'MSAA',en:'MSAA'}, v:{kr:'4x',en:'4x'},
+     why:{kr:'CMAA2는 경계를 흐립니다. 4x가 판독과 비용의 균형점입니다.',en:'CMAA2 softens edges; 4x is the cost/readability point.'}}
+  ],
+  apex: [
+    {k:{kr:'텍스처 스트리밍 예산',en:'Texture streaming budget'}, v:{kr:'중간',en:'Medium', by:'ram'},
+     why:{kr:'16GB에서 VRAM과 RAM을 동시에 압박하면 이동 중 스터터가 납니다.',en:'16GB systems hit VRAM and RAM together and stutter while rotating.'}},
+    {k:{kr:'그림자 · 스포트 섀도',en:'Shadow / spot shadow'}, v:{kr:'끄기',en:'Off'},
+     why:{kr:'실내 교전에서 프레임 급락의 주범입니다.',en:'Main cause of frame collapse indoors.'}},
+    {k:{kr:'모델 디테일',en:'Model detail'}, v:{kr:'중간',en:'Medium', by:'cpu'},
+     why:{kr:'먼 거리 판독은 스코프 배율이 담당합니다. 모델 수는 CPU 드로우콜과 직결됩니다.',en:'Scopes handle long-range reading; model count maps to CPU draw calls.'}}
+  ],
+  ow2: [
+    {k:{kr:'렌더 스케일',en:'Render scale'}, v:{kr:'100% 고정 (자동 해제)',en:'100% fixed (auto off)'},
+     why:{kr:'자동은 여유가 생기면 140%까지 올려 지연을 키웁니다.',en:'Auto climbs to 140% when there is headroom and adds latency.'}},
+    {k:{kr:'그래픽 품질',en:'Quality preset'}, v:{kr:'낮음',en:'Low'},
+     why:{kr:'이 게임은 낮음에서도 판독이 좋습니다.',en:'Readability holds up at Low.'}},
+    {k:{kr:'그림자 · 동적 반사',en:'Shadow / dynamic reflection'}, v:{kr:'끄기',en:'Off'},
+     why:{kr:'반사는 화면 공간 재계산으로 GPU 스파이크를 만듭니다.',en:'Reflections re-project the screen and spike the GPU.'}}
+  ]
+};
+
+/* ---------------- i18n ---------------- */
+const T = {
+  kr:{
+    h1:'사양은 그대로, <em>프레임타임</em>만 다시 짠다.',
+    lede:'게임 · CPU · GPU · 메모리 네 가지만 고르면 지금 조합의 병목과 예상 프레임을 1분 안에 계산합니다. 진단과 인게임 핵심 3행은 무료로 열어 두었고, 나머지 세팅과 이 사양에 맞춘 .bat은 유료 버전에 담았습니다.',
+    chips:['안티치트 미접촉','복원 지점 자동 생성','전체 롤백 포함','외부 전송 없음'],
+    cfgTitle:'입력', cfgStep:'STEP 1–4',
+    step1:'게임', step2:'CPU', step3:'GPU', step4:'메모리 · 모니터 · 증상',
+    symDrops:'교전 시 프레임 드랍', symInput:'인풋랙', symStutter:'미세 스터터링',
+    run:'진단 실행', hint:'입력값 기준 실시간 계산 · FHD 1920×1080 가정',
+    repTitle:'진단 리포트',
+    perf:'예상 성능 · FHD 경쟁 세팅',
+    low:'1% LOW', ft:'프레임타임', tick:'FT 편차',
+    balance:'병목 밸런스', target:'모니터 / 상한',
+    refresh:'모니터 주사율', est:'예상 평균', gap:'목표 대비', cap:'권장 프레임 상한',
+    next:'다음 단계',
+    tableTitle:'맞춤 세팅표',
+    freeTag:'FREE 3', proTag:'PRO', freeRows:'무료 공개 3행 / 전체 {n}행',
+    lockedItem:'유료 버전에서 공개', lockedWhy:'이 사양에 맞춘 값과 이유가 전체 {n}행에 들어 있습니다.',
+    lockHidden:'+ {n}행 잠김',
+    lockHead:'전체 세팅과 .bat은 유료 버전입니다',
+    lockBody:'지금 화면의 병목 진단과 인게임 3행은 그대로 무료입니다. 유료 버전에서 나머지 {n}행(드라이버 · Windows 포함)과 이 사양 · 게임에 맞춰 생성된 복원 지점 · 롤백 포함 .bat이 열립니다.',
+    priceK:'₩19,000 · 크몽', priceKSub:'국내 결제',
+    priceG:'$14.99 · Ko-fi', priceGSub:'GLOBAL / CARD',
+    batTitle:'안전 .bat 스크립트',
+    batLockHead:'.bat 스크립트는 유료 버전에 있습니다',
+    batLockBody:'구매 후 받는 파일에서 이 사양 · 게임에 맞춘 스크립트를 코드 전체 미리보기로 확인하고 그대로 내려받습니다. 메뉴는 1 적용 · 2 원상복구 · 3 종료입니다.',
+    buyTitle:'무엇이 열리나',
+    buyChip:'₩19,000 · $14.99',
+    krTag:'국내 · 크몽', krSub:'카드 · 계좌이체 · 카카오페이',
+    enTag:'GLOBAL · Ko-fi', enSub:'CARD · PayPal',
+    item1:'전체 {n}행 세팅표 — 인게임 · 드라이버 · Windows',
+    item2:'이 사양 · 게임 전용 .bat (복원 지점 · 롤백 포함)',
+    item3:'스크립트 전체 코드 미리보기 + 다운로드',
+    item4:'KR / EN 동시 수록, 브라우저만 있으면 실행',
+    buy:'구매하기', buySoon:'크몽 상품 준비 중',
+    buySoonToast:'크몽 등록이 끝나면 이 버튼이 열립니다. 지금은 Ko-fi에서 카드로 구매할 수 있습니다.',
+    buyNote:'결제 후 받은 파일 + 라이선스 키 1개',
+    buyHonest:'<b>솔직하게</b> — 예상 FPS는 공개 벤치마크와 하드웨어 지표를 조합한 모델 추정치로 ±10~15%(표본이 적은 타이틀 ±20%) 벌어집니다. 프레임 상승 수치를 보장하지 않습니다. 이 앱은 게임 파일 · 안티치트 · 커널 드라이버를 건드리지 않고, 바꾼 값은 .bat 안의 원상복구로 되돌립니다.',
+    f1:'계산 위치', f1v:'브라우저 내부 (전송 없음)',
+    f2:'입력 보관', f2v:'세션에만 유지',
+    f3:'문의', f3v:'Ko-fi 메시지',
+    disclaimer:'<b>고지</b> — 예상 FPS는 모델 추정치입니다. 실제 값은 맵 · 패치 · 드라이버 · 씬 복잡도에 따라 달라집니다. 이 도구는 게임 파일 · 안티치트(Vanguard · BattlEye · VAC · EAC) · 커널 드라이버를 건드리지 않습니다.'
+  },
+  en:{
+    h1:'Same hardware. <em>Rebuilt frame timing.</em>',
+    lede:'Pick a game, CPU, GPU and memory. You get the bottleneck and the realistic frame ceiling of that exact build in about a minute. The diagnosis and 3 core in-game rows are free; the rest of the table and the .bat are in the paid build.',
+    chips:['No anti-cheat contact','Restore point created','Full rollback included','Nothing leaves the browser'],
+    cfgTitle:'Input', cfgStep:'STEP 1–4',
+    step1:'Game', step2:'CPU', step3:'GPU', step4:'Memory · Monitor · Symptom',
+    symDrops:'Frame drops in fights', symInput:'Input latency', symStutter:'Micro stutter',
+    run:'RUN DIAGNOSIS', hint:'Live calculation · 1920×1080 competitive assumed',
+    repTitle:'Diagnosis',
+    perf:'ESTIMATED · FHD COMPETITIVE',
+    low:'1% LOW', ft:'FRAMETIME', tick:'FT SPREAD',
+    balance:'Bottleneck split', target:'Monitor / ceiling',
+    refresh:'Refresh rate', est:'Estimated avg', gap:'Gap to target', cap:'Recommended cap',
+    next:'Next step',
+    tableTitle:'Tuned settings',
+    freeTag:'FREE 3', proTag:'PRO', freeRows:'3 of {n} rows free',
+    lockedItem:'in the paid build', lockedWhy:'The value and reasoning for all {n} rows are in the paid build.',
+    lockHidden:'+ {n} rows locked',
+    lockHead:'The full table and the .bat are in the paid build',
+    lockBody:'The bottleneck read and 3 in-game rows stay free. The paid build adds the other {n} rows (driver and Windows included) and a .bat generated for this exact spec with a restore point and rollback.',
+    priceK:'₩19,000 · Kmong', priceKSub:'KOREA',
+    priceG:'$14.99 · Ko-fi', priceGSub:'GLOBAL / CARD',
+    batTitle:'Safe .bat script',
+    batLockHead:'The .bat ships with the paid build',
+    batLockBody:'In the purchased file you read the whole script generated for this spec and game, then download it. Menu: 1 apply, 2 restore, 3 exit.',
+    buyTitle:'What unlocks',
+    buyChip:'₩19,000 · $14.99',
+    krTag:'KOREA · Kmong', krSub:'card · bank transfer · KakaoPay',
+    enTag:'GLOBAL · Ko-fi', enSub:'CARD · PayPal',
+    item1:'All {n} rows — in-game, driver, Windows',
+    item2:'.bat generated for this spec and game (restore point + rollback)',
+    item3:'Full script preview and download',
+    item4:'KR / EN in one file, runs in any browser',
+    buy:'Buy', buySoon:'Kmong listing in progress',
+    buySoonToast:'The Kmong button opens once the listing is approved. Ko-fi works right now with a card.',
+    buyNote:'File + 1 license key after checkout',
+    buyHonest:'<b>Stated plainly</b> — FPS figures are model estimates from public benchmarks and hardware indices, ±10~15% (±20% for titles with thin data). No frame-gain number is promised. The tool never touches game files, anti-cheat or kernel drivers, and every change has a rollback in the .bat.',
+    f1:'Computed', f1v:'in your browser',
+    f2:'Input kept', f2v:'session only',
+    f3:'Contact', f3v:'Ko-fi message',
+    disclaimer:'<b>Note</b> — FPS figures are estimates. Real numbers move with map, patch, driver and scene complexity. This tool never touches game files, anti-cheat (Vanguard, BattlEye, VAC, EAC) or kernel drivers.'
+  }
+};
+
+const state = { game:'pubg', cpu:'5600x', gpu:'3070', ram:32, hz:240, symptom:'drops', lang:'kr' };
+
+const $ = (s)=>{const e=document.querySelector(s); if(!e) throw new Error('missing '+s); return e;};
+const t = (k)=> (T[state.lang][k] !== undefined ? T[state.lang][k] : k);
+const L = (o)=> (typeof o === 'object' && o !== null && (o.kr || o.en)) ? o[state.lang] : o;
+const cpu = ()=> CPUS.find(c=>c.id===state.cpu);
+const gpu = ()=> GPUS.find(g=>g.id===state.gpu);
+const game = ()=> GAMES[state.game];
+const num = (n)=> Math.round(n).toLocaleString('en-US');
+const esc = (s)=> String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+/* ---------------- model ---------------- */
+function compute(){
+  const c = cpu(), p = gpu(), g = game();
+  const cpuLimit = Math.round(g.cpuRef * Math.pow(c.score/100, 1.02));
+  const gpuLimit = Math.round(g.gpuRef * Math.pow(p.idx/78, 0.9));
+  const est = Math.round(Math.min(cpuLimit, gpuLimit) * 0.97);
+
+  let lowRatio = 0.605;
+  if (c.score >= 145) lowRatio += 0.07;
+  if (state.ram >= 32) lowRatio += 0.02;
+  if (state.ram <= 16) lowRatio -= 0.05;
+  if (p.vram <= 6) lowRatio -= 0.02;
+  if (state.symptom === 'stutter') lowRatio -= 0.03;
+  lowRatio = Math.max(0.46, Math.min(0.78, lowRatio));
+  const low = Math.round(est * lowRatio);
+
+  const ratio = cpuLimit / gpuLimit;
+  const type = ratio < 0.92 ? 'cpu' : (ratio > 1.08 ? 'gpu' : 'balanced');
+  const cpuLoad = Math.min(100, Math.round(est / cpuLimit * 100));
+  const gpuLoad = Math.min(100, Math.round(est / gpuLimit * 100));
+
+  let avgG = type==='cpu' ? [10,18] : type==='gpu' ? [6,12] : [5,9];
+  let lowG = type==='cpu' ? [18,28] : type==='gpu' ? [10,18] : [9,15];
+  if (state.ram <= 16){ lowG = [lowG[0]+3, lowG[1]+6]; }
+  if (state.symptom === 'stutter'){ lowG = [lowG[0]+4, lowG[1]+8]; avgG = [avgG[0]+1, avgG[1]+3]; }
+  if (state.symptom === 'input'){ avgG = [avgG[0]+1, avgG[1]+3]; }
+  if (state.symptom === 'drops'){ avgG = [avgG[0]+1, avgG[1]+2]; }
+
+  const afterAvg = [Math.round(est*(1+avgG[0]/100)), Math.round(est*(1+avgG[1]/100))];
+  const afterLow = [Math.round(low*(1+lowG[0]/100)), Math.round(low*(1+lowG[1]/100))];
+  const ft = (fps)=> (1000/fps);
+  const gap = Math.round((1 - est/state.hz) * 100);
+  const cap = Math.max(60, Math.min(state.hz - 3, Math.round(est*0.96/5)*5));
+  return {c,p,g,cpuLimit,gpuLimit,est,low,type,cpuLoad,gpuLoad,avgG,lowG,afterAvg,afterLow,ft,gap,cap,total:rowTotal(c,p,g)};
+}
+
+/* 전체 행 수: 인게임 + 드라이버 + Windows (유료판과 같은 규칙) */
+function rowTotal(c, p, g){
+  const amd = p.brand === 'amd';
+  const ingame = g.rows - (amd ? 1 : 0);
+  const driver = amd ? 5 : (5 + (p.dlss ? 1 : 0));
+  return ingame + driver + 8;
+}
+
+/* ---------------- render: config ---------------- */
+function renderConfig(){
+  const cfg = $('#cfg');
+  const c = cpu(), p = gpu(), g = game();
+  const optBtn = (on, name, meta, dataAttr)=>
+    `<button class="opt" type="button" aria-pressed="${on}" ${dataAttr}>`+
+    `<span class="n">${esc(name)}</span><span class="m">${esc(meta)}</span></button>`;
+
+  const gameOpts = GAME_ORDER.map(id=>{
+    const x = GAMES[id];
+    return optBtn(state.game===id, x.name, x.tag+' · '+x.engine, `data-k="game" data-v="${id}"`);
+  }).join('');
+  const cpuOpts = CPUS.map(x=> optBtn(state.cpu===x.id, x.name, `${x.cores} · L3 ${x.l3}`, `data-k="cpu" data-v="${x.id}"`)).join('');
+  const gpuOpts = GPUS.map(x=> optBtn(state.gpu===x.id, x.name, `${x.vram}GB · ${x.arch}`, `data-k="gpu" data-v="${x.id}"`)).join('');
+  const ramOpts = RAMS.map(x=> optBtn(state.ram===x.v, x.v+' GB',
+    x.v===16?(state.lang==='kr'?'스터터 위험':'stutter risk'):x.v===32?(state.lang==='kr'?'표준':'standard'):(state.lang==='kr'?'여유':'headroom'),
+    `data-k="ram" data-v="${x.v}"`)).join('');
+  const hzOpts = HZS.map(x=> optBtn(state.hz===x, x+(x===360?'Hz+':'Hz'),
+    x===144?'FHD':x===240?'COMPETITIVE':'ESPORTS', `data-k="hz" data-v="${x}"`)).join('');
+  const symOpts = SYMPTOMS.map(x=> optBtn(state.symptom===x, t('sym'+x[0].toUpperCase()+x.slice(1)),
+    x==='drops'?'CPU / 1%LOW':x==='input'?'LATENCY':'FRAMETIME', `data-k="symptom" data-v="${x}"`)).join('');
+
+  cfg.innerHTML = `
+    <div class="panel">
+      <div class="panel-head"><span class="step">STEP 1</span><span class="lab">${t('step1')}</span><span class="val">${esc(g.name)}</span></div>
+      <div class="opts g3">${gameOpts}</div>
+      <p class="gamenote"><b>${esc(g.engine)}</b> · ${esc(L(g.note))}</p>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><span class="step">STEP 2</span><span class="lab">${t('step2')}</span><span class="val">${esc(c.name)} · L3 ${c.l3}</span></div>
+      <div class="opts g2">${cpuOpts}</div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><span class="step">STEP 3</span><span class="lab">${t('step3')}</span><span class="val">${esc(p.name)} · ${p.vram}GB</span></div>
+      <div class="opts g2">${gpuOpts}</div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><span class="step">STEP 4</span><span class="lab">${t('step4')}</span><span class="val">${state.ram}GB · ${state.hz}Hz</span></div>
+      <div class="opts g1" style="margin-bottom:6px">${ramOpts}</div>
+      <div class="opts g1" style="margin-bottom:6px">${hzOpts}</div>
+      <div class="opts g1">${symOpts}</div>
+    </div>`;
+
+  cfg.querySelectorAll('.opt').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      const k = b.dataset.k, v = b.dataset.v;
+      state[k] = (k==='ram'||k==='hz') ? Number(v) : v;
+      renderAll();
+    });
+  });
+}
+
+/* ---------------- render: report ---------------- */
+function renderReport(){
+  const m = compute();
+  const c = m.c, p = m.p, g = m.g;
+  const kr = state.lang === 'kr';
+
+  $('#lblPerf').textContent = t('perf');
+  $('#avgFps').innerHTML = `${num(m.est)}<span class="u">FPS</span>`;
+  $('#subLow').innerHTML = `<span style="color:var(--dim)">${t('low')}</span> <b>${num(m.low)}</b>`;
+  $('#subFt').innerHTML = `<span style="color:var(--dim)">${t('ft')}</span> <b>${m.ft(m.est).toFixed(1)}ms</b>`;
+  $('#subTick').innerHTML = `<span style="color:var(--dim)">${t('tick')}</span> <b>+${(m.ft(m.low)-m.ft(m.est)).toFixed(1)}ms</b>`;
+
+  const verdictKr = {
+    cpu:`${g.name} FHD 경쟁 세팅에서 이 조합은 GPU가 아니라 CPU에 묶입니다. CPU 상한 ${num(m.cpuLimit)} FPS 대비 GPU 여력 ${num(m.gpuLimit)} FPS — 지금 사양에서 프레임을 결정하는 건 ${c.name}입니다. 세팅으로 회수할 수 있는 건 평균보다 1% Low 쪽이 큽니다.`,
+    gpu:`${g.name} FHD 경쟁 세팅에서 병목은 ${p.name}입니다. CPU 상한 ${num(m.cpuLimit)} FPS를 GPU가 ${num(m.gpuLimit)} FPS로 끌어내리고 있습니다. 옵션 몇 개를 내리면 ${num(m.afterAvg[1])} FPS 부근까지 회복됩니다.`,
+    balanced:`${c.name}와 ${p.name}가 ${g.name}에서 거의 맞물려 있습니다. 한쪽만 바꿔도 다음 병목이 바로 드러나는 구간이라, 지금은 부품 교체보다 세팅 정리가 먼저입니다.`
+  };
+  const verdictEn = {
+    cpu:`On ${g.name} at 1080p competitive, this build is CPU-bound, not GPU-bound. CPU ceiling ${num(m.cpuLimit)} fps against ${num(m.gpuLimit)} fps of GPU headroom — ${c.name} is what decides your frames. Tuning buys more in the 1% low than in the average.`,
+    gpu:`The bottleneck here is ${p.name}. The CPU could feed ${num(m.cpuLimit)} fps but the GPU lands at ${num(m.gpuLimit)} fps. Dropping a few options recovers most of the way to ~${num(m.afterAvg[1])} fps.`,
+    balanced:`${c.name} and ${p.name} are nearly matched on ${g.name}. Swap one part and the next bottleneck shows immediately, so settings cleanup matters more than hardware right now.`
+  };
+  $('#verdictText').textContent = (kr?verdictKr:verdictEn)[m.type];
+
+  const tags = [];
+  tags.push(`<span class="tag ${m.type==='cpu'?'hot':'ok'}">${kr?'병목':'BOTTLENECK'}: ${m.type==='cpu'?'CPU':m.type==='gpu'?'GPU':'BALANCED'}</span>`);
+  tags.push(`<span class="tag">${kr?'평균':'AVG'} ${num(m.afterAvg[0])}–${num(m.afterAvg[1])} FPS</span>`);
+  if (state.ram<=16) tags.push(`<span class="tag hot">16GB → ${kr?'스터터':'stutter'}</span>`);
+  if (p.vram<=8) tags.push(`<span class="tag">VRAM ${p.vram}GB</span>`);
+  if (g.conf==='low') tags.push(`<span class="tag hot">${kr?'표본 부족':'THIN DATA'}</span>`);
+  $('#vtags').innerHTML = tags.join('');
+
+  $('#lblBalance').textContent = t('balance');
+  $('#cpuPct').textContent = m.cpuLoad + '%';
+  $('#gpuPct').textContent = m.gpuLoad + '%';
+  $('#cpuFill').style.width = m.cpuLoad + '%';
+  $('#gpuFill').style.width = m.gpuLoad + '%';
+  $('#barCpu').className = 'bar ' + (m.cpuLoad>=m.gpuLoad?'hot':'cold');
+  $('#barGpu').className = 'bar ' + (m.gpuLoad>m.cpuLoad?'hot':'cold');
+  $('#cpuNote').textContent = `${c.name} · ${kr?'상한':'ceiling'} ${num(m.cpuLimit)} FPS`;
+  $('#gpuNote').textContent = `${p.name} · ${kr?'상한':'ceiling'} ${num(m.gpuLimit)} FPS`;
+
+  const honest = [];
+  const ceilLow = Math.max(60, Math.round(m.est*0.90/5)*5);
+  const ceilHigh = Math.max(ceilLow+10, Math.round(m.est*1.03/5)*5);
+  if (m.est < state.hz*0.70){
+    honest.push(kr?`<b>현실 상한</b> ${p.name}로 ${state.hz}Hz 유지는 불가능합니다. FHD ${ceilLow}~${ceilHigh} FPS 안정화가 목표입니다.`:
+                   `<b>Real ceiling</b> ${p.name} cannot hold ${state.hz}Hz here. Aim for a stable ${ceilLow}–${ceilHigh} fps at 1080p.`);
+  } else if (m.est < state.hz*0.95){
+    honest.push(kr?`<b>상시 유지 불가</b> ${state.hz}Hz를 계속 채우지는 못합니다. 교전 구간 ${ceilLow}~${ceilHigh} FPS를 바닥으로 잡으십시오.`:
+                   `<b>Not sustained</b> ${state.hz}Hz is not held throughout. Treat ${ceilLow}–${ceilHigh} fps as the floor during fights.`);
+  } else {
+    honest.push(kr?`<b>주사율 이미 충족</b> 이 조합은 ${state.hz}Hz를 평균으로 채웁니다. 세팅의 목적은 평균이 아니라 교전 중 1% Low와 프레임타임 편차입니다.`:
+                   `<b>Refresh already met</b> This build fills ${state.hz}Hz on average. Tuning here is about the 1% low and frame-time variance in fights, not the average.`);
+  }
+  if (state.ram<=16 && (g.tag==='BR'||state.game==='apex')){
+    honest.push(kr?`16GB는 이 타이틀에서 VRAM과 RAM을 함께 압박합니다. 32GB 전환이 세팅보다 큰 개선입니다.`:
+                   `16GB pressures VRAM and RAM together on this title; going 32GB beats any setting here.`);
+  }
+  if (m.type==='cpu' && c.score<120){
+    honest.push(kr?`${c.name}는 교전 순간 1% Low가 먼저 무너집니다. 3D V-Cache CPU로 바꾸면 1% Low가 25~35% 오르는 구간입니다.`:
+                   `${c.name} gives up the 1% low before the average. A 3D V-Cache part is worth 25–35% there.`);
+  }
+  $('#honestBox').innerHTML = honest.join(' ');
+
+  $('#lblTarget').textContent = t('target');
+  $('#tgRefreshL').textContent = t('refresh');
+  $('#tgRefresh').textContent = state.hz + ' Hz';
+  $('#tgEstL').textContent = t('est');
+  $('#tgEst').textContent = num(m.est) + ' FPS';
+  $('#tgGapL').textContent = t('gap');
+  $('#tgGap').innerHTML = m.gap > 0
+    ? `<span style="color:${m.gap>25?'var(--red)':'var(--amber)'}">−${m.gap}%</span>`
+    : `<span style="color:var(--lime)">${kr?'도달':'met'}</span>`;
+  $('#tgCapL').textContent = t('cap');
+  $('#tgCap').textContent = m.cap + ' FPS';
+
+  const nxt = [];
+  if (m.type==='cpu' && c.score<140) nxt.push(kr?`CPU: 9800X3D 기준 1% Low +25~35% (추정)`:`CPU: 9800X3D +25–35% on 1% low (est.)`);
+  if (m.type==='gpu' || p.idx<70) nxt.push(kr?`GPU가 다음 병목 — 해상도·화질을 먼저 내리십시오`:`GPU is next — drop resolution/quality first`);
+  if (state.ram<=16) nxt.push(kr?`메모리 32GB: 스터터·맵 로딩 개선`:`32GB: fixes stutter and map loads`);
+  if (state.symptom==='input') nxt.push(kr?`지연 체인: Reflex + V-Sync off + 상한 Hz−3`:`Latency chain: Reflex + V-Sync off + cap Hz−3`);
+  if (!nxt.length) nxt.push(kr?`모니터 주사율에 맞춘 상한만 유지`:`Hold the cap at refresh and stop there`);
+  $('#nextList').innerHTML = nxt.map(x=>`<li>${x}</li>`).join('');
+
+  renderTable(m);
+  renderBat(m);
+  $('#confChip').textContent = g.conf==='low'
+    ? (kr?'ESTIMATED · 표본 부족':'ESTIMATED · THIN DATA')
+    : (kr?'MODEL v1.0 · HIGH CONFIDENCE':'MODEL v1.0 · HIGH CONFIDENCE');
+}
+
+function renderTable(m){
+  const kr = state.lang === 'kr';
+  const total = m.total;
+  const free = FREE_ROWS[state.game].map(r=>{
+    let v = r.v;
+    if (r.by === 'vram8') v = (m.p.vram >= 8) ? r.v : {kr:'낮음', en:'Low'};
+    if (r.by === 'ram')   v = (state.ram <= 16) ? {kr:'낮음', en:'Low'} : r.v;
+    if (r.by === 'cpu')   v = (m.c.score < 110) ? {kr:'낮음 (CPU 바운드)', en:'Low (CPU bound)'} : r.v;
+    return {k:r.k, v, why:r.why};
+  });
+
+  $('#tableTitle').textContent = t('tableTitle');
+  $('#tableCount').textContent = t('freeRows').replace('{n}', total);
+  $('#tableTags').innerHTML = `<span class="freeTag">${t('freeTag')}</span><span class="proTag">${t('proTag')} ${total-3}</span>`;
+
+  const groupName = {ingame: kr?'인게임':'IN-GAME', driver: kr?'드라이버':'DRIVER', windows: kr?'WINDOWS':'WINDOWS'};
+  const COLS = '<colgroup><col class="c-idx"><col class="c-item"><col class="c-val"><col class="c-why"></colgroup>';
+  const rowHtml = (r, i)=> `<tr><td class="idx">${String(i).padStart(2,'0')}</td>`+
+      `<td class="item">${esc(L(r.k))}</td><td class="val">${esc(L(r.v))}</td><td class="why">${esc(L(r.why))}</td></tr>`;
+
+  let html = `<table>${COLS}<thead><tr><th>#</th><th>${kr?'항목':'SETTING'}</th><th>${kr?'권장 값':'VALUE'}</th><th>${kr?'이유':'WHY'}</th></tr></thead><tbody>`;
+  html += `<tr class="grouprow"><td colspan="4"><div class="gl"><span class="dot"></span>${groupName.ingame}<span class="cnt">${String(m.g.rows).padStart(2,'0')}</span></div></td></tr>`;
+  free.forEach((r,i)=>{ html += rowHtml(r, i+1); });
+  html += '</tbody></table>';
+
+  html += '<div class="lockblock">';
+  html += `<table>${COLS}<tbody class="lockedbody">`;
+  html += `<tr class="grouprow"><td colspan="4"><div class="gl"><span class="dot"></span>${groupName.ingame} / ${groupName.driver} / ${groupName.windows}<span class="cnt">${String(total-3).padStart(2,'0')}</span></div></td></tr>`;
+  for (let i=0;i<5;i++){
+    html += `<tr><td class="idx">${String(4+i).padStart(2,'0')}</td><td class="item">PRO</td><td class="val">•••</td><td class="why">${kr?'•••':'•••'}</td></tr>`;
+  }
+  html += `<tr class="sumrow"><td colspan="4">${t('lockHidden').replace('{n}', total-8)} — ${kr?'드라이버 · Windows 세팅 포함':'driver and Windows included'}</td></tr>`;
+  html += '</tbody></table>';
+  html += '<div class="veil"><div class="veilbox">';
+  html += `<div class="lockic">🔒 PRO · ${total-3} ${kr?'행 잠김':'rows locked'}</div>`;
+  html += `<h4>${t('lockHead')}</h4>`;
+  html += `<p>${t('lockBody').replace('{n}', total-3)}</p>`;
+  html += `<div class="price">
+      <a class="pbtn" href="#buy"><span class="p">${t('priceK')}</span><span class="m">${t('priceKSub')}</span></a>
+      <a class="pbtn alt" href="https://ko-fi.com/tessfps/shop" target="_blank" rel="noopener"><span class="p">${t('priceG')}</span><span class="m">${t('priceGSub')}</span></a>
+    </div>`;
+  html += `<div class="veilfoot"><a class="linkbtn" href="#buy">${kr?'무엇이 열리는지 보기':'See what unlocks'}</a></div>`;
+  html += '</div></div></div>';
+  $('#tableHost').innerHTML = html;
+}
+
+function renderBat(m){
+  const kr = state.lang === 'kr';
+  const p = m.p;
+  const fname = 'TESS_Safe_Optimizer_' + m.g.file + '.bat';
+  $('#batName').textContent = fname;
+  $('#batTitle').textContent = t('batTitle');
+  const steps = kr ? [
+    ['01','시스템 복원 지점 자동 생성 (실패 시 .reg 백업으로 대체)'],
+    ['02','전원 옵션 최고 성능 · 게임 모드 · 백그라운드 앱'],
+    ['03','MPO · 텔레메트리 정책 · GameDVR 캡처'],
+    ['04','시스템 정책 — HAGS ' + (p.brand==='nv' && ['4060','4070s','5070ti'].includes(p.id) ? '켜기' : '변경 없음') + ' · 텔레메트리'],
+    ['05','Nagle 해제 · DNS (되돌리기 포함)'],
+    ['06','메뉴 1 적용 / 2 원상복구 / 3 종료']
+  ] : [
+    ['01','Creates a system restore point (falls back to .reg backups)'],
+    ['02','Ultimate power plan, Game Mode, background apps'],
+    ['03','MPO, telemetry policy, GameDVR capture'],
+    ['04','System policy — HAGS ' + (p.brand==='nv' && ['4060','4070s','5070ti'].includes(p.id) ? 'on' : 'untouched') + ', telemetry'],
+    ['05','Nagle off and DNS, each with a revert step'],
+    ['06','Menu 1 apply / 2 restore / 3 exit']
+  ];
+  $('#batSteps').innerHTML = steps.map(s=>`<div><span class="k">${s[0]}</span><span>${esc(s[1])}</span></div>`).join('');
+  $('#batSafe').innerHTML = kr
+    ? `<b>바꾸지 않는 것</b> — 게임 파일, 안티치트 4종, 커널 드라이버, Defender, 서비스, bcdedit, 타이머 해상도 핵. 변경 전 값은 스크립트와 같은 위치의 백업 폴더에 저장됩니다.`
+    : `<b>Never touched</b> — game files, the four anti-cheats, kernel drivers, Defender, services, bcdedit, timer-resolution hacks. Every prior value is written to a backup folder beside the script.`;
+  $('#batMeta').innerHTML = `<div class="mono" style="font-size:10px;color:var(--dim);line-height:1.9">
+    ${kr?'파일':'FILE'} · ${fname}<br>
+    ${kr?'인코딩':'ENC'} · UTF-8 (한글 깨짐 없음) / CRLF<br>
+    ${kr?'권한':'RIGHTS'} · UAC 자동 요청<br>
+    ${kr?'배포':'SHIP'} · ${kr?'유료 버전 전용':'paid build only'}</div>`;
+
+  $('#batVeilBox').innerHTML = `
+    <div class="lockic">🔒 PRO</div>
+    <h4>${t('batLockHead')}</h4>
+    <p>${t('batLockBody')}</p>
+    <div class="price">
+      <a class="pbtn" href="#buy"><span class="p">${t('priceK')}</span><span class="m">${t('priceKSub')}</span></a>
+      <a class="pbtn alt" href="https://ko-fi.com/tessfps/shop" target="_blank" rel="noopener"><span class="p">${t('priceG')}</span><span class="m">${t('priceGSub')}</span></a>
+    </div>
+    <div class="veilfoot"><a class="linkbtn" href="#buy">${state.lang==='kr'?'구매 안내':'How to buy'}</a></div>`;
+}
+
+/* ---------------- render: shell ---------------- */
+function renderShell(){
+  document.documentElement.lang = state.lang;
+  document.title = state.lang==='kr'
+    ? 'TESS FPS Optimizer — 1분 병목 진단 (무료)'
+    : 'TESS FPS Optimizer — 1-minute bottleneck diagnosis (free)';
+  const metaDesc = document.querySelector('meta[name="description"]');
+  if (metaDesc) metaDesc.setAttribute('content', state.lang==='kr'
+    ? '게임·CPU·GPU·메모리를 고르면 1080p 경쟁 세팅 기준 병목과 예상 프레임을 1분 안에 계산합니다. 진단과 인게임 핵심 3행은 무료, 전체 23행과 원클릭 .bat은 유료 버전.'
+    : 'Pick your game, CPU, GPU and memory: get the bottleneck and realistic frame ceiling for 1080p competitive play in a minute. Free diagnosis and 3 core rows; the full table and .bat in the paid build.');
+
+  $('#h1').innerHTML = t('h1');
+  $('#lede').textContent = t('lede');
+  $('#metaChips').innerHTML = T[state.lang].chips.map((c,i)=>`<span class="mchip ${i===0?'ok':''}"><i></i>${esc(c)}</span>`).join('');
+  $('#cfgTitle').textContent = t('cfgTitle');
+  $('#cfgStep').textContent = t('cfgStep');
+  $('#runBtn').textContent = t('run');
+  $('#runHint').textContent = t('hint');
+  $('#repTitle').textContent = t('repTitle');
+  $('#brandSub').textContent = 'FPS OPTIMIZER';
+  $('#buildTag').textContent = state.lang==='kr' ? 'FREE PREVIEW' : 'FREE PREVIEW';
+  $('#topBuy').textContent = state.lang==='kr' ? 'PRO 23행 + .bat' : 'PRO 23 ROWS + .BAT';
+
+  const c = cpu(), p = gpu(), g = game();
+  $('#specLine').innerHTML = `<b>${esc(g.name)}</b> · ${esc(c.name)} · ${esc(p.name)} · ${state.ram}GB · ${state.hz}Hz`;
+
+  $('#btnKR').setAttribute('aria-pressed', String(state.lang==='kr'));
+  $('#btnEN').setAttribute('aria-pressed', String(state.lang==='en'));
+
+  // buy block
+  const total = rowTotal(c, p, g);
+  $('#buyTitle').textContent = t('buyTitle');
+  $('#buyChip').textContent = t('buyChip');
+  $('#krTag').textContent = t('krTag');
+  $('#krSub').textContent = t('krSub');
+  $('#krList').innerHTML = [t('item1'), t('item2'), t('item3'), t('item4')].map(x=>`<li>${x.replace('{n}', total)}</li>`).join('');
+  $('#enTag').textContent = t('enTag');
+  $('#enSub').textContent = t('enSub');
+  $('#enList').innerHTML = [t('item1'), t('item2'), t('item3'), t('item4')].map(x=>`<li>${x.replace('{n}', total)}</li>`).join('');
+  $('#krNote').textContent = t('buyNote');
+  $('#enNote').textContent = t('buyNote');
+  $('#buyHonest').innerHTML = t('buyHonest');
+
+  const km = $('#kmongBtn');
+  if (BUY.kmong){
+    km.textContent = t('buy') + ' · ₩19,000';
+    km.onclick = ()=>{ window.location.href = BUY.kmong; };
+  } else {
+    km.textContent = t('buySoon');
+    km.classList.add('soon');
+    km.onclick = ()=> toast(t('buySoonToast'));
+  }
+  $('#kofiBtn').textContent = t('buy') + ' · $14.99';
+
+  $('#f1').textContent = t('f1'); $('#f1v').textContent = t('f1v');
+  $('#f2').textContent = t('f2'); $('#f2v').textContent = t('f2v');
+  $('#f3').textContent = t('f3'); $('#f3v').textContent = t('f3v');
+  $('#disclaimer').innerHTML = t('disclaimer');
+}
+
+function renderAll(){
+  renderShell();
+  renderConfig();
+  renderReport();
+}
+
+let toastTimer = null;
+function toast(msg){
+  const el = $('#toast');
+  el.textContent = msg;
+  el.classList.add('on');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>el.classList.remove('on'), 4200);
+}
+
+/* ---------------- wiring ---------------- */
+document.querySelectorAll('.lang button').forEach(b=>{
+  b.addEventListener('click', ()=>{ state.lang = b.dataset.lang; renderAll(); });
+});
+$('#runBtn').addEventListener('click', ()=>{
+  $('#report').scrollIntoView({behavior:'smooth', block:'start'});
+  const card = document.querySelector('#report .grid3');
+  card.style.transition = 'box-shadow .25s';
+  card.style.boxShadow = 'inset 0 0 0 1px var(--lime)';
+  setTimeout(()=>{ card.style.boxShadow = 'none'; }, 900);
+});
+document.querySelectorAll('a[href="#buy"]').forEach(a=>{
+  a.addEventListener('click', (e)=>{
+    e.preventDefault();
+    const el = $('#buy');
+    window.scrollTo({top: el.getBoundingClientRect().top + window.pageYOffset - 70, behavior:'smooth'});
+  });
+});
+
+renderAll();
+</script>
+</body>
+</html>

@@ -533,7 +533,7 @@ pre.code .str{color:#C8FF00}
 
     <div class="section-head" id="buyHead">
       <span class="no">03</span><h2 id="buyTitle"></h2><span class="rule"></span>
-      <span class="chip mono" id="buyChip">₩9,900 · $14.99</span>
+      <span class="chip mono" id="buyChip">₩9,900 · $9.99</span>
     </div>
 
     <section id="buy">
@@ -548,10 +548,10 @@ pre.code .str{color:#C8FF00}
         </div>
         <div class="buycard" id="cardEn">
           <div class="tagline" id="enTag"></div>
-          <div class="p">$14.99<small>USD</small></div>
+          <div class="p">$9.99<small>USD</small></div>
           <div class="sub" id="enSub"></div>
           <ul id="enList"></ul>
-          <a class="btn ghost" href="https://ko-fi.com/tessfps/shop" target="_blank" rel="noopener" id="kofiBtn"></a>
+          <a class="btn ghost" href="https://ko-fi.com/s/d8d78fecea" target="_blank" rel="noopener" id="kofiBtn"></a>
           <div class="note" id="enNote"></div>
         </div>
       </div>
@@ -561,7 +561,7 @@ pre.code .str{color:#C8FF00}
     <div class="landingfoot">
       <span><b id="f1"></b> <span id="f1v"></span></span>
       <span><b id="f2"></b> <span id="f2v"></span></span>
-      <span><b id="f3"></b> <a href="https://ko-fi.com/tessfps/shop" target="_blank" rel="noopener" id="f3v"></a></span>
+      <span><b id="f3"></b> <a href="https://ko-fi.com/s/d8d78fecea" target="_blank" rel="noopener" id="f3v"></a></span>
     </div>
     <p class="disclaimer" id="disclaimer"></p>
   </section>
@@ -581,7 +581,7 @@ pre.code .str{color:#C8FF00}
 /* ---------------- 판매 링크 (여기만 고치면 됨) ---------------- */
 const BUY = {
   kmong: '',                              // 크몽 상품 등록 후 https://kmong.com/gig/XXXXXX
-  kofi:  'https://ko-fi.com/tessfps/shop'
+  kofi:  'https://ko-fi.com/s/d8d78fecea'
 };
 
 /* ---------------- data: hardware ---------------- */
@@ -783,12 +783,12 @@ const T = {
     lockHead:'전체 세팅과 .bat은 유료 버전입니다',
     lockBody:'지금 화면의 병목 진단과 인게임 3행은 그대로 무료입니다. 유료 버전에서 나머지 {n}행(드라이버 · Windows 포함)과 이 사양 · 게임에 맞춰 생성된 복원 지점 · 롤백 포함 .bat이 열립니다.',
     priceK:'₩9,900 · 크몽', priceKSub:'국내 결제',
-    priceG:'$14.99 · Ko-fi', priceGSub:'GLOBAL / CARD',
+    priceG:'$9.99 · Ko-fi', priceGSub:'GLOBAL / CARD',
     batTitle:'안전 .bat 스크립트',
     batLockHead:'.bat 스크립트는 유료 버전에 있습니다',
     batLockBody:'구매 후 받는 파일에서 이 사양 · 게임에 맞춘 스크립트를 코드 전체 미리보기로 확인하고 그대로 내려받습니다. 메뉴는 1 적용 · 2 원상복구 · 3 종료입니다.',
     buyTitle:'무엇이 열리나',
-    buyChip:'₩9,900 · $14.99',
+    buyChip:'₩9,900 · $9.99',
     krTag:'국내 · 크몽', krSub:'카드 · 계좌이체 · 카카오페이',
     enTag:'GLOBAL · Ko-fi', enSub:'CARD · PayPal',
     item1:'전체 {n}행 세팅표 — 인게임 · 드라이버 · Windows',
@@ -825,12 +825,12 @@ const T = {
     lockHead:'The full table and the .bat are in the paid build',
     lockBody:'The bottleneck read and 3 in-game rows stay free. The paid build adds the other {n} rows (driver and Windows included) and a .bat generated for this exact spec with a restore point and rollback.',
     priceK:'₩9,900 · Kmong', priceKSub:'KOREA',
-    priceG:'$14.99 · Ko-fi', priceGSub:'GLOBAL / CARD',
+    priceG:'$9.99 · Ko-fi', priceGSub:'GLOBAL / CARD',
     batTitle:'Safe .bat script',
     batLockHead:'The .bat ships with the paid build',
     batLockBody:'In the purchased file you read the whole script generated for this spec and game, then download it. Menu: 1 apply, 2 restore, 3 exit.',
     buyTitle:'What unlocks',
-    buyChip:'₩9,900 · $14.99',
+    buyChip:'₩9,900 · $9.99',
     krTag:'KOREA · Kmong', krSub:'card · bank transfer · KakaoPay',
     enTag:'GLOBAL · Ko-fi', enSub:'CARD · PayPal',
     item1:'All {n} rows — in-game, driver, Windows',
@@ -1130,7 +1130,7 @@ function renderTable(m){
   html += `<p>${t('lockBody').replace('{n}', total-3)}</p>`;
   html += `<div class="price">
       <a class="pbtn" href="#buy"><span class="p">${t('priceK')}</span><span class="m">${t('priceKSub')}</span></a>
-      <a class="pbtn alt" href="https://ko-fi.com/tessfps/shop" target="_blank" rel="noopener"><span class="p">${t('priceG')}</span><span class="m">${t('priceGSub')}</span></a>
+      <a class="pbtn alt" href="https://ko-fi.com/s/d8d78fecea" target="_blank" rel="noopener"><span class="p">${t('priceG')}</span><span class="m">${t('priceGSub')}</span></a>
     </div>`;
   html += `<div class="veilfoot"><a class="linkbtn" href="#buy">${kr?'무엇이 열리는지 보기':'See what unlocks'}</a></div>`;
   html += '</div></div></div>';
@@ -1174,7 +1174,7 @@ function renderBat(m){
     <p>${t('batLockBody')}</p>
     <div class="price">
       <a class="pbtn" href="#buy"><span class="p">${t('priceK')}</span><span class="m">${t('priceKSub')}</span></a>
-      <a class="pbtn alt" href="https://ko-fi.com/tessfps/shop" target="_blank" rel="noopener"><span class="p">${t('priceG')}</span><span class="m">${t('priceGSub')}</span></a>
+      <a class="pbtn alt" href="https://ko-fi.com/s/d8d78fecea" target="_blank" rel="noopener"><span class="p">${t('priceG')}</span><span class="m">${t('priceGSub')}</span></a>
     </div>
     <div class="veilfoot"><a class="linkbtn" href="#buy">${state.lang==='kr'?'구매 안내':'How to buy'}</a></div>`;
 }
@@ -1231,7 +1231,7 @@ function renderShell(){
     km.classList.add('soon');
     km.onclick = ()=> toast(t('buySoonToast'));
   }
-  $('#kofiBtn').textContent = t('buy') + ' · $14.99';
+  $('#kofiBtn').textContent = t('buy') + ' · $9.99';
 
   $('#f1').textContent = t('f1'); $('#f1v').textContent = t('f1v');
   $('#f2').textContent = t('f2'); $('#f2v').textContent = t('f2v');

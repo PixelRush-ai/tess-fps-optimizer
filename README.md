@@ -18,7 +18,7 @@ This repository hosts the **free preview**: the diagnosis and 3 in-game rows. Th
 the remaining settings rows (in-game, driver, Windows) as a 20–25-row table and generates a Windows
 `.bat` tailored to the selected spec, with a restore point and a full rollback.
 
-Paid build: Kmong ₩9,900 (KR) · Ko-fi $14.99 (global) — https://ko-fi.com/tessfps/shop
+Paid build: Kmong ₩9,900 (KR) · Ko-fi $9.99 (global) — https://ko-fi.com/s/d8d78fecea
 
 ---
 

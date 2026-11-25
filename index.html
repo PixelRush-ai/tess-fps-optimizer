@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>TESS FPS Optimizer — 1분 병목 진단 (무료)</title>
-<meta name="description" content="게임·CPU·GPU·메모리를 고르면 1080p 경쟁 세팅 기준 병목과 예상 프레임을 1분 안에 계산합니다. 진단과 인게임 핵심 3행은 무료, 전체 23행과 원클릭 .bat은 유료 버전.">
+<meta name="description" content="게임·CPU·GPU·메모리를 고르면 1080p 경쟁 세팅 기준 병목과 예상 프레임을 1분 안에 계산합니다. 진단과 인게임 핵심 3행은 무료, 전체 세팅표(20~25행)와 원클릭 .bat은 유료 버전.">
 <link rel="canonical" href="https://pixelrush-ai.github.io/tess-fps-optimizer/">
 <meta property="og:type" content="website">
 <meta property="og:title" content="TESS FPS Optimizer — 1분 병목 진단">
@@ -125,6 +125,34 @@ body::before{
 .opt[aria-pressed="true"] .n{color:var(--lime)}
 .opt[aria-pressed="true"] .m{color:rgba(200,255,0,.65)}
 .opt[aria-pressed="true"]::after{content:"";position:absolute;top:0;right:0;width:0;height:0;border-top:7px solid var(--lime);border-left:7px solid transparent}
+
+/* 하드웨어 필터 · 세대 그룹 */
+.filtrow{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 10px}
+.fchip{
+  display:inline-flex;align-items:center;gap:6px;background:var(--surface2);border:1px solid var(--line);
+  color:var(--muted);font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;padding:5px 9px;
+  cursor:pointer;transition:.12s
+}
+.fchip:hover{border-color:var(--line2);color:var(--text)}
+.fchip[aria-pressed="true"]{background:var(--lime-dim);border-color:rgba(200,255,0,.55);color:var(--lime)}
+.fchip b{font-weight:500;opacity:.6;letter-spacing:.06em}
+.optlist{
+  max-height:438px;overflow-y:auto;overscroll-behavior:contain;padding-right:4px;
+  scrollbar-width:thin;scrollbar-color:#2E3542 transparent
+}
+.optlist::-webkit-scrollbar{width:6px}
+.optlist::-webkit-scrollbar-thumb{background:#2E3542}
+.optlist::-webkit-scrollbar-track{background:transparent}
+.lsthint{margin-top:8px;font-family:var(--mono);font-size:9px;letter-spacing:.1em;color:var(--dim)}
+.lsthint::before{content:"";display:inline-block;width:0;height:0;margin-right:7px;
+  border-left:3.5px solid transparent;border-right:3.5px solid transparent;border-top:4.5px solid var(--lime)}
+.opts .optgroup{
+  grid-column:1 / -1;display:flex;align-items:center;gap:8px;margin:5px 0 0;padding-top:7px;
+  border-top:1px dashed #1E232B;font-family:var(--mono);font-size:9px;letter-spacing:.14em;color:var(--dim);
+  position:sticky;top:0;z-index:2;background:var(--surface);padding-bottom:4px
+}
+.opts .optgroup:first-child{margin-top:0;padding-top:0;border-top:0}
+.opts .optgroup .cnt{color:#3E4654;letter-spacing:.06em;margin-left:2px}
 
 .runbar{display:flex;align-items:center;gap:16px;margin-top:18px;flex-wrap:wrap}
 .btn{
@@ -326,6 +354,10 @@ pre.code .str{color:#C8FF00}
   td{padding:9px 8px;font-size:11.5px}
   th{padding:8px}
   td.why{font-size:11px}
+  .filtrow{overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:2px}
+  .fchip{flex:none}
+  .optlist{max-height:330px;padding-right:2px}
+  .opts .optgroup{padding-bottom:5px}
 }
 
 /* ---------- landing only ---------- */
@@ -388,7 +420,7 @@ pre.code .str{color:#C8FF00}
         <button id="btnKR" type="button" aria-pressed="true" data-lang="kr">KR</button>
         <button id="btnEN" type="button" aria-pressed="false" data-lang="en">EN</button>
       </div>
-      <a class="cta-mini" href="#buy" id="topBuy">PRO 23행 + .bat</a>
+      <a class="cta-mini" href="#buy" id="topBuy">PRO 세팅표 + .bat</a>
     </div>
   </div>
 </header>
@@ -554,23 +586,78 @@ const BUY = {
 
 /* ---------------- data: hardware ---------------- */
 const CPUS = [
-  {id:'5600x', name:'Ryzen 5 5600X', brand:'AMD', cores:'6C / 12T', l3:'32 MB', score:100},
-  {id:'7800x3d', name:'Ryzen 7 7800X3D', brand:'AMD', cores:'8C / 16T', l3:'96 MB 3D', score:150},
-  {id:'9800x3d', name:'Ryzen 7 9800X3D', brand:'AMD', cores:'8C / 16T', l3:'96 MB 3D', score:162},
-  {id:'12400f', name:'Core i5-12400F', brand:'INTEL', cores:'6P / 12T', l3:'18 MB', score:97},
-  {id:'13600k', name:'Core i5-13600K', brand:'INTEL', cores:'6P+8E / 20T', l3:'24 MB', score:119},
-  {id:'14700k', name:'Core i7-14700K', brand:'INTEL', cores:'8P+12E / 28T', l3:'33 MB', score:131},
-  {id:'14900k', name:'Core i9-14900K', brand:'INTEL', cores:'8P+16E / 32T', l3:'36 MB', score:137}
+  /* AMD · AM4 */
+  {id:'3600',   name:'Ryzen 5 3600',    brand:'AMD',   cores:'6C / 12T',  l3:'32 MB',    score:78,  zen:'Zen 2', grp:'AM4 · ZEN 2/3'},
+  {id:'5600',   name:'Ryzen 5 5600',    brand:'AMD',   cores:'6C / 12T',  l3:'32 MB',    score:98,  zen:'Zen 3', grp:'AM4 · ZEN 2/3'},
+  {id:'5600x',  name:'Ryzen 5 5600X',   brand:'AMD',   cores:'6C / 12T',  l3:'32 MB',    score:100, zen:'Zen 3', grp:'AM4 · ZEN 2/3'},
+  {id:'5700x3d',name:'Ryzen 7 5700X3D', brand:'AMD',   cores:'8C / 16T',  l3:'96 MB 3D', score:124, zen:'Zen 3', grp:'AM4 · ZEN 2/3', v3d:1},
+  {id:'5800x3d',name:'Ryzen 7 5800X3D', brand:'AMD',   cores:'8C / 16T',  l3:'96 MB 3D', score:130, zen:'Zen 3', grp:'AM4 · ZEN 2/3', v3d:1},
+  /* AMD · AM5 Zen 4 */
+  {id:'7500f',  name:'Ryzen 5 7500F',   brand:'AMD',   cores:'6C / 12T',  l3:'32 MB',    score:112, zen:'Zen 4', grp:'AM5 · ZEN 4'},
+  {id:'7600',   name:'Ryzen 5 7600',    brand:'AMD',   cores:'6C / 12T',  l3:'32 MB',    score:115, zen:'Zen 4', grp:'AM5 · ZEN 4'},
+  {id:'7700x',  name:'Ryzen 7 7700X',   brand:'AMD',   cores:'8C / 16T',  l3:'32 MB',    score:122, zen:'Zen 4', grp:'AM5 · ZEN 4'},
+  {id:'7800x3d',name:'Ryzen 7 7800X3D', brand:'AMD',   cores:'8C / 16T',  l3:'96 MB 3D', score:150, zen:'Zen 4', grp:'AM5 · ZEN 4', v3d:1},
+  /* AMD · AM5 Zen 5 */
+  {id:'9600x',  name:'Ryzen 5 9600X',   brand:'AMD',   cores:'6C / 12T',  l3:'32 MB',    score:130, zen:'Zen 5', grp:'AM5 · ZEN 5'},
+  {id:'9700x',  name:'Ryzen 7 9700X',   brand:'AMD',   cores:'8C / 16T',  l3:'32 MB',    score:136, zen:'Zen 5', grp:'AM5 · ZEN 5'},
+  {id:'9800x3d',name:'Ryzen 7 9800X3D', brand:'AMD',   cores:'8C / 16T',  l3:'96 MB 3D', score:162, zen:'Zen 5', grp:'AM5 · ZEN 5', v3d:1},
+  {id:'9950x3d',name:'Ryzen 9 9950X3D', brand:'AMD',   cores:'16C / 32T', l3:'128 MB 3D',score:164, zen:'Zen 5', grp:'AM5 · ZEN 5', v3d:1},
+  /* INTEL · LGA1700 12세대 */
+  {id:'12400f', name:'Core i5-12400F',  brand:'INTEL', cores:'6P / 12T',  l3:'18 MB',    score:97,  zen:'Alder Lake',  grp:'LGA1700 · 12TH'},
+  {id:'12600k', name:'Core i5-12600K',  brand:'INTEL', cores:'6P+4E / 16T',l3:'20 MB',   score:110, zen:'Alder Lake',  grp:'LGA1700 · 12TH'},
+  /* INTEL · LGA1700 13/14세대 */
+  {id:'13400f', name:'Core i5-13400F',  brand:'INTEL', cores:'6P+4E / 16T',l3:'20 MB',   score:105, zen:'Raptor Lake', grp:'LGA1700 · 13/14TH'},
+  {id:'13600k', name:'Core i5-13600K',  brand:'INTEL', cores:'6P+8E / 20T',l3:'24 MB',   score:119, zen:'Raptor Lake', grp:'LGA1700 · 13/14TH'},
+  {id:'13700k', name:'Core i7-13700K',  brand:'INTEL', cores:'8P+8E / 24T',l3:'30 MB',   score:127, zen:'Raptor Lake', grp:'LGA1700 · 13/14TH'},
+  {id:'14400f', name:'Core i5-14400F',  brand:'INTEL', cores:'6P+4E / 16T',l3:'20 MB',   score:106, zen:'Raptor Lake', grp:'LGA1700 · 13/14TH'},
+  {id:'14600k', name:'Core i5-14600K',  brand:'INTEL', cores:'6P+8E / 20T',l3:'24 MB',   score:124, zen:'Raptor Lake', grp:'LGA1700 · 13/14TH'},
+  {id:'14700k', name:'Core i7-14700K',  brand:'INTEL', cores:'8P+12E / 28T',l3:'33 MB',  score:131, zen:'Raptor Lake', grp:'LGA1700 · 13/14TH'},
+  {id:'14900k', name:'Core i9-14900K',  brand:'INTEL', cores:'8P+16E / 32T',l3:'36 MB',  score:137, zen:'Raptor Lake', grp:'LGA1700 · 13/14TH'},
+  /* INTEL · LGA1851 Core Ultra 200S */
+  {id:'245k',   name:'Core Ultra 5 245K',brand:'INTEL',cores:'6P+8E / 14T',l3:'24 MB',   score:122, zen:'Arrow Lake',  grp:'LGA1851 · ULTRA'},
+  {id:'265k',   name:'Core Ultra 7 265K',brand:'INTEL',cores:'8P+12E / 20T',l3:'30 MB',  score:128, zen:'Arrow Lake',  grp:'LGA1851 · ULTRA'},
+  {id:'285k',   name:'Core Ultra 9 285K',brand:'INTEL',cores:'8P+16E / 24T',l3:'36 MB',  score:135, zen:'Arrow Lake',  grp:'LGA1851 · ULTRA'}
 ];
 
 const GPUS = [
-  {id:'1660s', name:'GTX 1660 SUPER', vram:6, idx:40, brand:'nv', arch:'Turing', dlss:0},
-  {id:'3060',  name:'RTX 3060',       vram:12, idx:56, brand:'nv', arch:'Ampere', dlss:2},
-  {id:'3070',  name:'RTX 3070',       vram:8, idx:78, brand:'nv', arch:'Ampere', dlss:2},
-  {id:'4060',  name:'RTX 4060',       vram:8, idx:70, brand:'nv', arch:'Ada', dlss:3},
+  /* NVIDIA · Turing */
+  {id:'1650',  name:'GTX 1650',       vram:4,  idx:30,  brand:'nv', arch:'Turing', dlss:0},
+  {id:'1660s', name:'GTX 1660 SUPER', vram:6,  idx:40,  brand:'nv', arch:'Turing', dlss:0},
+  {id:'2060',  name:'RTX 2060',       vram:6,  idx:47,  brand:'nv', arch:'Turing', dlss:2},
+  {id:'2070s', name:'RTX 2070 SUPER', vram:8,  idx:61,  brand:'nv', arch:'Turing', dlss:2},
+  /* NVIDIA · Ampere */
+  {id:'3050',  name:'RTX 3050',       vram:8,  idx:44,  brand:'nv', arch:'Ampere', dlss:2},
+  {id:'3060',  name:'RTX 3060',       vram:12, idx:56,  brand:'nv', arch:'Ampere', dlss:2},
+  {id:'3060ti',name:'RTX 3060 Ti',    vram:8,  idx:69,  brand:'nv', arch:'Ampere', dlss:2},
+  {id:'3070',  name:'RTX 3070',       vram:8,  idx:78,  brand:'nv', arch:'Ampere', dlss:2},
+  {id:'3080',  name:'RTX 3080',       vram:10, idx:95,  brand:'nv', arch:'Ampere', dlss:2},
+  /* NVIDIA · Ada */
+  {id:'4060',  name:'RTX 4060',       vram:8,  idx:70,  brand:'nv', arch:'Ada', dlss:3},
+  {id:'4060ti',name:'RTX 4060 Ti',    vram:8,  idx:82,  brand:'nv', arch:'Ada', dlss:3},
+  {id:'4070',  name:'RTX 4070',       vram:12, idx:100, brand:'nv', arch:'Ada', dlss:3},
   {id:'4070s', name:'RTX 4070 SUPER', vram:12, idx:112, brand:'nv', arch:'Ada', dlss:3},
+  {id:'4070tis',name:'RTX 4070 Ti SUPER', vram:16, idx:125, brand:'nv', arch:'Ada', dlss:3},
+  {id:'4080s', name:'RTX 4080 SUPER', vram:16, idx:155, brand:'nv', arch:'Ada', dlss:3},
+  {id:'4090',  name:'RTX 4090',       vram:24, idx:191, brand:'nv', arch:'Ada', dlss:3},
+  /* NVIDIA · Blackwell */
+  {id:'5060',  name:'RTX 5060',       vram:8,  idx:85,  brand:'nv', arch:'Blackwell', dlss:4},
+  {id:'5060ti',name:'RTX 5060 Ti',    vram:16, idx:95,  brand:'nv', arch:'Blackwell', dlss:4},
+  {id:'5070',  name:'RTX 5070',       vram:12, idx:117, brand:'nv', arch:'Blackwell', dlss:4},
   {id:'5070ti',name:'RTX 5070 Ti',    vram:16, idx:152, brand:'nv', arch:'Blackwell', dlss:4},
-  {id:'7800xt',name:'RX 7800 XT',     vram:16, idx:110, brand:'amd', arch:'RDNA 3', dlss:0}
+  {id:'5080',  name:'RTX 5080',       vram:16, idx:167, brand:'nv', arch:'Blackwell', dlss:4},
+  {id:'5090',  name:'RTX 5090',       vram:32, idx:226, brand:'nv', arch:'Blackwell', dlss:4},
+  /* AMD · RDNA 2 */
+  {id:'6600',  name:'RX 6600',        vram:8,  idx:50,  brand:'amd', arch:'RDNA 2', dlss:0},
+  {id:'6700xt',name:'RX 6700 XT',     vram:12, idx:74,  brand:'amd', arch:'RDNA 2', dlss:0},
+  /* AMD · RDNA 3 */
+  {id:'7600',  name:'RX 7600',        vram:8,  idx:64,  brand:'amd', arch:'RDNA 3', dlss:0},
+  {id:'7700xt',name:'RX 7700 XT',     vram:12, idx:87,  brand:'amd', arch:'RDNA 3', dlss:0},
+  {id:'7800xt',name:'RX 7800 XT',     vram:16, idx:110, brand:'amd', arch:'RDNA 3', dlss:0},
+  {id:'7900xt',name:'RX 7900 XT',     vram:20, idx:118, brand:'amd', arch:'RDNA 3', dlss:0},
+  {id:'7900xtx',name:'RX 7900 XTX',   vram:24, idx:145, brand:'amd', arch:'RDNA 3', dlss:0},
+  /* AMD · RDNA 4 */
+  {id:'9060xt',name:'RX 9060 XT',     vram:16, idx:86,  brand:'amd', arch:'RDNA 4', dlss:0},
+  {id:'9070xt',name:'RX 9070 XT',     vram:16, idx:138, brand:'amd', arch:'RDNA 4', dlss:0}
 ];
 
 const RAMS = [{v:16},{v:32},{v:64}];
@@ -595,9 +682,15 @@ const GAMES = {
                    en:'Source-based · streaming stutter appears on rotation and drops. The texture budget moves how it feels more than anything else.'}},
   ow2:      {name:'Overwatch 2',         file:'OW2',      engine:'Proprietary',     cpuRef:288, gpuRef:372, conf:'high', tag:'HERO', rows:7,
              note:{kr:'자체 엔진 · 최적화가 좋아 세팅 여지가 작습니다. 대신 버퍼링 옵션 하나가 지연을 크게 바꿉니다.',
-                   en:'In-house engine · little tuning room. One buffering toggle, though, moves latency a lot.'}}
+                   en:'In-house engine · little tuning room. One buffering toggle, though, moves latency a lot.'}},
+  codmw4:   {name:'Call of Duty: Modern Warfare 4', btn:'Call of Duty: MW4', file:'CoD_MW4', engine:'Call of Duty Engine', cpuRef:200, gpuRef:220, conf:'low', tag:'FPS', rows:11,
+             note:{kr:'2026-10-23 출시 · 6v6 MP와 DMZ 추출 모드가 CPU를 크게 씁니다. 공개 벤치 표본이 적어 ±20% 오차를 감안하십시오. Ricochet은 커널 수준이라 게임 파일·드라이버를 건드리지 않습니다.',
+                   en:'Shipped 2026-10-23 · 6v6 MP and DMZ extraction load the CPU hard. Public data is thin, so allow ±20%. Ricochet is kernel-level: no game file or driver is touched.'}},
+  deltaforce:{name:'Delta Force',          file:'DeltaForce', engine:'Unreal Engine 4', cpuRef:195, gpuRef:210, conf:'low', tag:'EXTRACTION', rows:9,
+             note:{kr:'UE4 대형 전장(Warfare 64인 · Operations 추출). 1080p에서는 GPU보다 CPU가 먼저 막히고, 레이 트레이싱을 끄면 30~50%가 돌아옵니다. ACE는 커널 안티치트라 파일·레지스트리를 건드리지 않습니다.',
+                   en:'UE4 large-scale battles (64-player Warfare, Operations extraction). At 1080p the CPU binds before the GPU, and turning ray tracing off returns 30–50%. ACE is a kernel anti-cheat: no file or registry is touched.'}}
 };
-const GAME_ORDER = ['pubg','valorant','wardogs','cs2','apex','ow2'];
+const GAME_ORDER = ['pubg','valorant','wardogs','cs2','apex','ow2','codmw4','deltaforce'];
 
 /* 무료 공개 3행 — 유료판과 같은 문장. 이 3행 외의 세팅 값은 이 파일에 없다. */
 const FREE_ROWS = {
@@ -648,6 +741,22 @@ const FREE_ROWS = {
      why:{kr:'이 게임은 낮음에서도 판독이 좋습니다.',en:'Readability holds up at Low.'}},
     {k:{kr:'그림자 · 동적 반사',en:'Shadow / dynamic reflection'}, v:{kr:'끄기',en:'Off'},
      why:{kr:'반사는 화면 공간 재계산으로 GPU 스파이크를 만듭니다.',en:'Reflections re-project the screen and spike the GPU.'}}
+  ],
+  codmw4: [
+    {k:{kr:'해상도 스케일',en:'Resolution scale'}, v:{kr:'100 (네이티브)',en:'100 (native)'},
+     why:{kr:'100 아래로 내리면 GPU 부하는 줄지만 먼 거리 판독이 먼저 무너집니다. 1080p 경쟁 세팅은 100 고정입니다.',en:'Dropping below 100% cuts GPU cost but kills long-range readability first. Keep 100 at 1080p.'}},
+    {k:{kr:'업스케일링 (DLSS 4.5 / FSR)',en:'Upscaling (DLSS 4.5 / FSR)'}, v:{kr:'끄기 (모자랄 때 품질)',en:'Off (Quality if short)'},
+     why:{kr:'MW4는 DLSS 4.5와 프레임 생성을 지원하지만 생성 프레임은 입력 지연을 늘립니다. 경쟁전은 끄고, DMZ 대형 맵에서만 품질 모드를 쓰십시오.',en:'MW4 ships DLSS 4.5 and frame generation, but generated frames add input latency. Off in MP; Quality only on the big DMZ maps.'}},
+    {k:{kr:'안티앨리어싱',en:'Anti-aliasing'}, v:{kr:'SMAA T2X',en:'SMAA T2X'},
+     why:{kr:'필름 AA는 경계를 흐리고 한 프레임을 더합니다. SMAA T2X가 판독과 비용의 균형점입니다.',en:'Filmic AA blurs edges and adds a frame; SMAA T2X is the readability/cost balance.'}}
+  ],
+  deltaforce: [
+    {k:{kr:'슈퍼 레졸루션',en:'Super resolution'}, v:{kr:'끄기 (1080p는 CPU 병목)',en:'Off (CPU-bound at 1080p)'},
+     why:{kr:'1080p에서는 업스케일링을 켜도 CPU가 먼저 막힙니다. 1440p 이상에서만 품질 모드를 쓰십시오.',en:'At 1080p the CPU binds before the GPU, so upscaling buys little. Quality only at 1440p and above.'}},
+    {k:{kr:'레이 트레이싱',en:'Ray tracing'}, v:{kr:'끄기',en:'Off'},
+     why:{kr:'끄면 30~50%가 돌아옵니다. 반사는 교전 판독에 기여하지 않습니다.',en:'Turning it off returns 30–50%; reflections do not help you read a fight.'}},
+    {k:{kr:'안티앨리어싱',en:'Anti-aliasing'}, v:{kr:'끄기 (TAA 금지)',en:'Off (no TAA)'},
+     why:{kr:'TAA 계열은 이동 중 잔상을 남깁니다. 계단 현상은 감수하고 경계를 살리는 편이 낫습니다.',en:'TAA smears while you move; sharper edges are the better trade at 1080p.'}}
   ]
 };
 
@@ -693,7 +802,7 @@ const T = {
     f1:'계산 위치', f1v:'브라우저 내부 (전송 없음)',
     f2:'입력 보관', f2v:'세션에만 유지',
     f3:'문의', f3v:'Ko-fi 메시지',
-    disclaimer:'<b>고지</b> — 예상 FPS는 모델 추정치입니다. 실제 값은 맵 · 패치 · 드라이버 · 씬 복잡도에 따라 달라집니다. 이 도구는 게임 파일 · 안티치트(Vanguard · BattlEye · VAC · EAC) · 커널 드라이버를 건드리지 않습니다.'
+    disclaimer:'<b>고지</b> — 예상 FPS는 모델 추정치입니다. 실제 값은 맵 · 패치 · 드라이버 · 씬 복잡도에 따라 달라집니다. 이 도구는 게임 파일 · 안티치트(Vanguard · BattlEye · VAC · EAC · Ricochet · ACE) · 커널 드라이버를 건드리지 않습니다.'
   },
   en:{
     h1:'Same hardware. <em>Rebuilt frame timing.</em>',
@@ -735,11 +844,11 @@ const T = {
     f1:'Computed', f1v:'in your browser',
     f2:'Input kept', f2v:'session only',
     f3:'Contact', f3v:'Ko-fi message',
-    disclaimer:'<b>Note</b> — FPS figures are estimates. Real numbers move with map, patch, driver and scene complexity. This tool never touches game files, anti-cheat (Vanguard, BattlEye, VAC, EAC) or kernel drivers.'
+    disclaimer:'<b>Note</b> — FPS figures are estimates. Real numbers move with map, patch, driver and scene complexity. This tool never touches game files, anti-cheat (Vanguard, BattlEye, VAC, EAC, Ricochet, ACE) or kernel drivers.'
   }
 };
 
-const state = { game:'pubg', cpu:'5600x', gpu:'3070', ram:32, hz:240, symptom:'drops', lang:'kr' };
+const state = { game:'pubg', cpu:'5600x', gpu:'3070', ram:32, hz:240, symptom:'drops', lang:'kr', f:{cpu:'all', gpu:'all'} };
 
 const $ = (s)=>{const e=document.querySelector(s); if(!e) throw new Error('missing '+s); return e;};
 const t = (k)=> (T[state.lang][k] !== undefined ? T[state.lang][k] : k);
@@ -747,6 +856,8 @@ const L = (o)=> (typeof o === 'object' && o !== null && (o.kr || o.en)) ? o[stat
 const cpu = ()=> CPUS.find(c=>c.id===state.cpu);
 const gpu = ()=> GPUS.find(g=>g.id===state.gpu);
 const game = ()=> GAMES[state.game];
+/* HAGS 프로파일 — Reflex 프레임 페이싱 이득이 큰 세대에서만 켠다 (RTX 40/50) */
+const hagsOk = (p)=> p.brand==='nv' && (p.arch==='Ada' || p.arch==='Blackwell');
 const num = (n)=> Math.round(n).toLocaleString('en-US');
 const esc = (s)=> String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 
@@ -758,7 +869,7 @@ function compute(){
   const est = Math.round(Math.min(cpuLimit, gpuLimit) * 0.97);
 
   let lowRatio = 0.605;
-  if (c.score >= 145) lowRatio += 0.07;
+  if (c.v3d || c.score >= 145) lowRatio += 0.07;
   if (state.ram >= 32) lowRatio += 0.02;
   if (state.ram <= 16) lowRatio -= 0.05;
   if (p.vram <= 6) lowRatio -= 0.02;
@@ -804,10 +915,46 @@ function renderConfig(){
 
   const gameOpts = GAME_ORDER.map(id=>{
     const x = GAMES[id];
-    return optBtn(state.game===id, x.name, x.tag+' · '+x.engine, `data-k="game" data-v="${id}"`);
+    return optBtn(state.game===id, x.btn || x.name, x.tag+' · '+x.engine, `data-k="game" data-v="${id}"`);
   }).join('');
-  const cpuOpts = CPUS.map(x=> optBtn(state.cpu===x.id, x.name, `${x.cores} · L3 ${x.l3}`, `data-k="cpu" data-v="${x.id}"`)).join('');
-  const gpuOpts = GPUS.map(x=> optBtn(state.gpu===x.id, x.name, `${x.vram}GB · ${x.arch}`, `data-k="gpu" data-v="${x.id}"`)).join('');
+  /* 하드웨어 목록: 브랜드 필터 + 세대 그룹으로 나눠 찾기 쉽게 */
+  const FILTS = {
+    cpu: [{v:'all', lab:'ALL'}, {v:'AMD', lab:'AMD'}, {v:'INTEL', lab:'INTEL'}],
+    gpu: [{v:'all', lab:'ALL'}, {v:'nv', lab:'NVIDIA'}, {v:'amd', lab:'AMD'}]
+  };
+  const filtRow = (key, rows)=>{
+    const cur = state.f[key] || 'all';
+    return '<div class="filtrow">' + FILTS[key].map(d=>{
+      const n = d.v==='all' ? rows.length : rows.filter(x=>x.brand===d.v).length;
+      return `<button class="fchip" type="button" aria-pressed="${cur===d.v}" data-fk="${key}" data-fv="${d.v}">${d.lab}<b>${String(n).padStart(2,'0')}</b></button>`;
+    }).join('') + '</div>';
+  };
+  const fCount = (key, rows)=>{
+    const cur = state.f[key] || 'all';
+    return cur==='all' ? rows.length : rows.filter(x=>x.brand===cur).length;
+  };
+  const lstHint = (key, rows)=> fCount(key, rows) > 8
+    ? `<div class="lsthint">${state.lang==='kr' ? '스크롤해서 전체 보기 · 브랜드 탭으로 좁히기' : 'scroll for the full list · narrow it with the brand tabs'}</div>`
+    : '';
+  const hwOpts = (rows, key, grpOf)=>{
+    const cur = state.f[key] || 'all';
+    const list = cur==='all' ? rows : rows.filter(x=>x.brand===cur);
+    let last = null, out = '';
+    list.forEach(x=>{
+      const gname = grpOf(x);
+      if (gname !== last){
+        const n = list.filter(y=>grpOf(y)===gname).length;
+        out += `<div class="optgroup"><span>${esc(gname)}</span><span class="cnt">${String(n).padStart(2,'0')}</span></div>`;
+        last = gname;
+      }
+      out += optBtn(state[key]===x.id, x.name,
+        key==='cpu' ? `${x.cores} · L3 ${x.l3}` : `${x.vram}GB · ${x.arch}`,
+        `data-k="${key}" data-v="${x.id}"`);
+    });
+    return out;
+  };
+  const cpuOpts = hwOpts(CPUS, 'cpu', x=>x.grp);
+  const gpuOpts = hwOpts(GPUS, 'gpu', x=>x.arch);
   const ramOpts = RAMS.map(x=> optBtn(state.ram===x.v, x.v+' GB',
     x.v===16?(state.lang==='kr'?'스터터 위험':'stutter risk'):x.v===32?(state.lang==='kr'?'표준':'standard'):(state.lang==='kr'?'여유':'headroom'),
     `data-k="ram" data-v="${x.v}"`)).join('');
@@ -824,11 +971,13 @@ function renderConfig(){
     </div>
     <div class="panel">
       <div class="panel-head"><span class="step">STEP 2</span><span class="lab">${t('step2')}</span><span class="val">${esc(c.name)} · L3 ${c.l3}</span></div>
-      <div class="opts g2">${cpuOpts}</div>
+      ${filtRow('cpu', CPUS)}
+      <div class="optlist"><div class="opts g2">${cpuOpts}</div></div>${lstHint('cpu', CPUS)}
     </div>
     <div class="panel">
       <div class="panel-head"><span class="step">STEP 3</span><span class="lab">${t('step3')}</span><span class="val">${esc(p.name)} · ${p.vram}GB</span></div>
-      <div class="opts g2">${gpuOpts}</div>
+      ${filtRow('gpu', GPUS)}
+      <div class="optlist"><div class="opts g2">${gpuOpts}</div></div>${lstHint('gpu', GPUS)}
     </div>
     <div class="panel">
       <div class="panel-head"><span class="step">STEP 4</span><span class="lab">${t('step4')}</span><span class="val">${state.ram}GB · ${state.hz}Hz</span></div>
@@ -836,6 +985,10 @@ function renderConfig(){
       <div class="opts g1" style="margin-bottom:6px">${hzOpts}</div>
       <div class="opts g1">${symOpts}</div>
     </div>`;
+
+  cfg.querySelectorAll('.fchip').forEach(b=>{
+    b.addEventListener('click', ()=>{ state.f[b.dataset.fk] = b.dataset.fv; renderConfig(); });
+  });
 
   cfg.querySelectorAll('.opt').forEach(b=>{
     b.addEventListener('click', ()=>{
@@ -994,21 +1147,21 @@ function renderBat(m){
     ['01','시스템 복원 지점 자동 생성 (실패 시 .reg 백업으로 대체)'],
     ['02','전원 옵션 최고 성능 · 게임 모드 · 백그라운드 앱'],
     ['03','MPO · 텔레메트리 정책 · GameDVR 캡처'],
-    ['04','시스템 정책 — HAGS ' + (p.brand==='nv' && ['4060','4070s','5070ti'].includes(p.id) ? '켜기' : '변경 없음') + ' · 텔레메트리'],
+    ['04','시스템 정책 — HAGS ' + (hagsOk(p) ? '켜기' : '변경 없음') + ' · 텔레메트리'],
     ['05','Nagle 해제 · DNS (되돌리기 포함)'],
     ['06','메뉴 1 적용 / 2 원상복구 / 3 종료']
   ] : [
     ['01','Creates a system restore point (falls back to .reg backups)'],
     ['02','Ultimate power plan, Game Mode, background apps'],
     ['03','MPO, telemetry policy, GameDVR capture'],
-    ['04','System policy — HAGS ' + (p.brand==='nv' && ['4060','4070s','5070ti'].includes(p.id) ? 'on' : 'untouched') + ', telemetry'],
+    ['04','System policy — HAGS ' + (hagsOk(p) ? 'on' : 'untouched') + ', telemetry'],
     ['05','Nagle off and DNS, each with a revert step'],
     ['06','Menu 1 apply / 2 restore / 3 exit']
   ];
   $('#batSteps').innerHTML = steps.map(s=>`<div><span class="k">${s[0]}</span><span>${esc(s[1])}</span></div>`).join('');
   $('#batSafe').innerHTML = kr
-    ? `<b>바꾸지 않는 것</b> — 게임 파일, 안티치트 4종, 커널 드라이버, Defender, 서비스, bcdedit, 타이머 해상도 핵. 변경 전 값은 스크립트와 같은 위치의 백업 폴더에 저장됩니다.`
-    : `<b>Never touched</b> — game files, the four anti-cheats, kernel drivers, Defender, services, bcdedit, timer-resolution hacks. Every prior value is written to a backup folder beside the script.`;
+    ? `<b>바꾸지 않는 것</b> — 게임 파일, 안티치트 6종, 커널 드라이버, Defender, 서비스, bcdedit, 타이머 해상도 핵. 변경 전 값은 스크립트와 같은 위치의 백업 폴더에 저장됩니다.`
+    : `<b>Never touched</b> — game files, the six anti-cheats, kernel drivers, Defender, services, bcdedit, timer-resolution hacks. Every prior value is written to a backup folder beside the script.`;
   $('#batMeta').innerHTML = `<div class="mono" style="font-size:10px;color:var(--dim);line-height:1.9">
     ${kr?'파일':'FILE'} · ${fname}<br>
     ${kr?'인코딩 · UTF-8 (한글 깨짐 없음)':'ENC · UTF-8 (no broken Hangul)'} / CRLF<br>
@@ -1034,7 +1187,7 @@ function renderShell(){
     : 'TESS FPS Optimizer — 1-minute bottleneck diagnosis (free)';
   const metaDesc = document.querySelector('meta[name="description"]');
   if (metaDesc) metaDesc.setAttribute('content', state.lang==='kr'
-    ? '게임·CPU·GPU·메모리를 고르면 1080p 경쟁 세팅 기준 병목과 예상 프레임을 1분 안에 계산합니다. 진단과 인게임 핵심 3행은 무료, 전체 23행과 원클릭 .bat은 유료 버전.'
+    ? '게임·CPU·GPU·메모리를 고르면 1080p 경쟁 세팅 기준 병목과 예상 프레임을 1분 안에 계산합니다. 진단과 인게임 핵심 3행은 무료, 전체 세팅표(20~25행)와 원클릭 .bat은 유료 버전.'
     : 'Pick your game, CPU, GPU and memory: get the bottleneck and realistic frame ceiling for 1080p competitive play in a minute. Free diagnosis and 3 core rows; the full table and .bat in the paid build.');
 
   $('#h1').innerHTML = t('h1');
@@ -1047,7 +1200,6 @@ function renderShell(){
   $('#repTitle').textContent = t('repTitle');
   $('#brandSub').textContent = 'FPS OPTIMIZER';
   $('#buildTag').textContent = state.lang==='kr' ? 'FREE PREVIEW' : 'FREE PREVIEW';
-  $('#topBuy').textContent = state.lang==='kr' ? 'PRO 23행 + .bat' : 'PRO 23 ROWS + .BAT';
 
   const c = cpu(), p = gpu(), g = game();
   $('#specLine').innerHTML = `<b>${esc(g.name)}</b> · ${esc(c.name)} · ${esc(p.name)} · ${state.ram}GB · ${state.hz}Hz`;
@@ -1057,6 +1209,7 @@ function renderShell(){
 
   // buy block
   const total = rowTotal(c, p, g);
+  $('#topBuy').textContent = state.lang==='kr' ? `PRO ${total}행 + .bat` : `PRO ${total} ROWS + .BAT`;
   $('#buyTitle').textContent = t('buyTitle');
   $('#buyChip').textContent = t('buyChip');
   $('#krTag').textContent = t('krTag');
